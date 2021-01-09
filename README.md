@@ -26,7 +26,7 @@ In this project, we are imitating Messenger and making it more systemy.
 - Users will be able to send to and receive messages from other users. 
 - Users can look up available users.
 - Users can add "friends" to talk to.
-- Users can remove "friends."
+- Users can remove "friends." [extra]
 
 ## Technical design
 ### Topic Implementations
@@ -36,20 +36,29 @@ In this project, we are imitating Messenger and making it more systemy.
 - Use forking and processes for interacting with cilents.
 
 ### Delegations
-Victor:  learn networking\
-Michael: learn networking\
-Jin:     learn networking
+Victor:  Making friend list (adding, searching, deleting)
+Michael: Sending and receiving messages
+Jin:     Designing chat window, message history/metadata
+ALL:     Learn networking
 
 ### Data Structure
 Array: buffer for data (friend names & stuff)\
 Queue: buffer for the messages\
-Tree (pre-fix):  compressing messages [extra]
+Tree (pre-fix):  compressing messages [extra]\
+Structs: File manipulation and tree
 
 ### Algorithms
 Message Compression Algorithm [extra]
 Message Decompression Algorithm [extra]
 
 ## Timeline
+1. Create the server and research networking in C [1/9 - 1/11]
+2. Give a name, get a friend (pre-adding friend)  [1/11 - 1/14]
+3. Implement friend list (adding/removing)        [1/11 - 1/14]
+4. Implement basic chatting                       [1/14 - 1/16]
+5. Group chat                                     [1/16 - 1/18]
+6. Bug fixing/implement extra features            [1/18 - 1/25]
+
 Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 
 ## Extra Stuff (to add?)
@@ -57,3 +66,8 @@ Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 - Friend requests (accept/deny).
 - Block users from messaging (refuse messages).
 - Extra encryption/decryption
+- Notifications
+
+## Questions For DW
+- Can we make this online? How about local networks?
+    - If it is online, can we write a server in other languages?
