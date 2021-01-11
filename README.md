@@ -5,9 +5,9 @@
 In this project, we are imitating Messenger and making it more systemy.
 
 ## Basic Walkthrough
-0. (First time) running the program -> creates a config file.
-    1. Prompts user to add a name.
-    2. Adds name to config file.
+0.  Prompts user to type a username.
+    - If username is not found then prompts users to sign up.
+    - Otherwise user enters a password to log in.
     
 1. Lists things for the users to do.
     1. Lists functionalities:
@@ -36,28 +36,26 @@ In this project, we are imitating Messenger and making it more systemy.
 - Use forking and processes for interacting with cilents.
 
 ### Delegations
-Victor:  Making friend list (adding, searching, deleting)
-Michael: Sending and receiving messages
-Jin:     Designing chat window, message history/metadata
-ALL:     Learn networking
+Victor:  Making friend list (adding, searching, deleting).
+Michael: Sending and receiving messages.
+Jin:     Designing chat window, message history/metadata.
 
 ### Data Structure
-Array: buffer for data (friend names & stuff)\
-Queue: buffer for the messages\
-Tree (pre-fix):  compressing messages [extra]\
-Structs: File manipulation and tree
+Array: buffer for data (friend names & stuff).\
+Queue: buffer for the messages.\
+Tree (pre-fix):  compressing messages [extra].\
+Structs: File manipulation and tree.
 
 ### Algorithms
-Message Compression Algorithm [extra]
-Message Decompression Algorithm [extra]
+Message Compression Algorithm [extra].
+Message Decompression Algorithm [extra].
 
 ## Timeline
-1. Create the server and research networking in C [1/9 - 1/11]
-2. Give a name, get a friend (pre-adding friend)  [1/11 - 1/14]
-3. Implement friend list (adding/removing)        [1/11 - 1/14]
-4. Implement basic chatting                       [1/14 - 1/16]
-5. Group chat                                     [1/16 - 1/18]
-6. Bug fixing/implement extra features            [1/18 - 1/25]
+1. Give a name, get a friend (pre-adding friend)  [1/11 - 1/14]
+2. Implement friend list (adding/removing)        [1/11 - 1/14]
+3. Implement basic chatting                       [1/14 - 1/16]
+4. Group chat                                     [1/16 - 1/18]
+5. Bug fixing/implement extra features            [1/18 - 1/25]
 
 Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 
@@ -65,9 +63,5 @@ Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 - Talking with mutliple people at once.
 - Friend requests (accept/deny).
 - Block users from messaging (refuse messages).
-- Extra encryption/decryption
-- Notifications
-
-## Questions For DW
-- Can we make this online? How about local networks?
-    - If it is online, can we write a server in other languages?
+- Extra encryption/decryption.
+- Notifications.
