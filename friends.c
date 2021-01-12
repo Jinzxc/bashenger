@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
+// Check to see if a file exists with name of the user
 int user_exists(char *filename) {
      struct stat buffer;   
      if (stat(filename, &buffer) == 0) {
@@ -15,7 +15,7 @@ int user_exists(char *filename) {
      return 0;
 }
 
-
+// Returns a char ** of all friends
 char **get_friends(char *user) {
     if (user_exists(user) != 0) {
         return NULL;
@@ -38,6 +38,7 @@ char **get_friends(char *user) {
     return friend_array;
 }
 
+// Appends friend to end of file, if user exists
 int add_friend(char *user, char *friend) {
     if (user_exists(user) != 0) {
         return -1;
@@ -59,6 +60,7 @@ int add_friend(char *user, char *friend) {
     return 1;
 }
 
+// Rewrites all friends into the file excapt for the friend removed
 int remove_friend(char *user, char *friend) {
     if (user_exists(user) != 0) {
         return -1;
