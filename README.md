@@ -36,9 +36,9 @@ In this project, we are imitating Messenger and making it more systemy.
 - Use forking and processes for interacting with cilents.
 
 ### Delegations
-Victor:  Making friend list (adding, searching, deleting).
-Michael: Sending and receiving messages.
-Jin:     Designing chat window, message history/metadata.
+Victor:  Making friend list (adding, searching, deleting). \
+Michael: Sending and receiving messages. \
+Jin:     Designing chat window, message history/metadata. 
 
 ### Data Structure
 Array: buffer for data (friend names & stuff).\
@@ -47,7 +47,7 @@ Tree (pre-fix):  compressing messages [extra].\
 Structs: File manipulation and tree.
 
 ### Algorithms
-Message Compression Algorithm [extra].
+Message Compression Algorithm [extra]. \
 Message Decompression Algorithm [extra].
 
 ## Timeline
