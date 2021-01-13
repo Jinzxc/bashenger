@@ -46,6 +46,7 @@ int setup_new_handshake()
     check_error(status);
     printf("Handshake established! Received final confirmation message: %s\n\n", final_confirmation);
     close(fd);
+    close(secret_pipe);
     return (atoi(secret_path));
 }
 
@@ -68,7 +69,7 @@ int main()
 
     // num_clients: the number of clients that will be talking in this given chat session.
     // for now, num_clients=2. When we work on group chat function, there will be additional logic to sort that out.
-    int num_clients = 2;
+    int num_clients = 1;
     int client_pids[num_clients];
     // for each client, fork a handshake process
     int i;
@@ -102,10 +103,10 @@ int main()
     {
         int j;
         char fifo[BUF_SIZE];
-        sprintf(fifo, "%dz", 1212);
-        mkfifo(fifo, 0666);
+        sprintf(fifo, "%d", client_pids[i]);
         int fd;
         fd = open(fifo, O_WRONLY);
+        printf("writing...\n");
         write(fd, &num_clients, sizeof(int));
 
         for (j = 0; j < num_clients; j++)

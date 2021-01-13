@@ -23,12 +23,12 @@ static void sighandler(int signo)
     if (signo == SIGINT)
     {
         char buffer[BUF_SIZE];
-        sprintf(buffer, "%dz", getpid());
+        sprintf(buffer, "%d", getpid());
         remove(buffer);
         exit(0);
     }
 }
-void send_handshake()
+int send_handshake()
 {
     char secret_path[BUF_SIZE];
     sprintf(secret_path, "%d", getpid());
@@ -45,26 +45,21 @@ void send_handshake()
     char msg[BUF_SIZE];
     status = read(secret_pipe, msg, BUF_SIZE);
     check_error(status);
-    remove(secret_path);
+    // remove(secret_path);
     // letting server know we got acknowledgement
     char confirm_msg[] = "Yeah got the acknowledgement!\n";
     status = write(wkp, confirm_msg, sizeof(confirm_msg));
     check_error(status);
     close(wkp);
-    close(secret_pipe);
+    return secret_pipe;
 }
 
 int main()
 {
     signal(SIGINT, sighandler);
-    send_handshake();
-    char priv[BUF_SIZE];
-    sprintf(priv, "%dz", getpid());
-    printf("%d\n", getpid());
+    int secret_pipe = send_handshake();
     int num_clients = -52;
-    int fd;
-    fd = open(priv, O_RDONLY);
-    read(fd, &num_clients, sizeof(int));
+    read(secret_pipe, &num_clients, sizeof(int));
     printf("num_clients: %d\n", num_clients);
     
     // int other_clients[num_clients - 1];
