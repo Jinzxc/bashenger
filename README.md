@@ -65,3 +65,7 @@ Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 - Block users from messaging (refuse messages).
 - Extra encryption/decryption.
 - Notifications.
+
+
+# DEVLOG
+1/12 - Victor - Added functions for adding, deleting, and listing friends for a given friend
