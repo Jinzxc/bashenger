@@ -17,18 +17,21 @@ void check_error(int status)
         printf("Error (%d): %s\n", errno, strerror(errno));
     }
 }
-char *setup_new_handshake()
+
+int setup_new_handshake()
 {
     printf("Awaiting Client Connection...\n");
     // wkp stands for the server's well known pipe
-    mkfifo("./wkp", 0666);
+    int client_pid;
+    mkfifo("wkp", 0666);
     int fd;
-    fd = open("./wkp", O_RDONLY);
-    char *secret_path = malloc(BUF_SIZE + 2);
+    fd = open("wkp", O_RDONLY);
+    char secret_path[BUF_SIZE];
     int status;
-    status = read(fd, secret_path, BUF_SIZE + 2);
+    status = read(fd, secret_path, BUF_SIZE);
+    printf("my pid is %d\n", getpid());
     int secret_pipe = open(secret_path, O_WRONLY);
-    remove("./wkp");
+    remove("wkp");
     check_error(status);
     // Client sends to server first
     printf("Handshake Commencing with client (Path=%s)\n\n", secret_path);
@@ -43,7 +46,7 @@ char *setup_new_handshake()
     check_error(status);
     printf("Handshake established! Received final confirmation message: %s\n\n", final_confirmation);
     close(fd);
-    return secret_path;
+    return (atoi(secret_path));
 }
 
 void read_message(char *client_pid)
@@ -62,35 +65,58 @@ void read_message(char *client_pid)
 
 int main()
 {
+
     // num_clients: the number of clients that will be talking in this given chat session.
     // for now, num_clients=2. When we work on group chat function, there will be additional logic to sort that out.
     int num_clients = 2;
-
-    // create a shared FIFO for chat. This is how server sends message to everyone involved.
-    mkfifo("chat_fifo", 0666); // TODO: make fifo_name unique to chat
-    // int chat_fifo = open("chat_fifo", O_WRONLY);
-
+    int client_pids[num_clients];
     // for each client, fork a handshake process
     int i;
     int id;
     for (i = 0; i < num_clients; i++)
     {
+        int fds[2];
+        pipe(fds);
         id = fork();
         check_error(id);
-        int status;
+
         if (!id)
         { // refers to child fork
-            char *client_pid;
+
+            int client_pid;
             client_pid = setup_new_handshake();
-            printf("client_pid: %s\n", client_pid);
-            read_message(client_pid);
-            free(client_pid);
-            exit(0); // after child is done communicating with client, it dies
+            close(fds[0]);
+            write(fds[1], &client_pid, sizeof(int));
+            return client_pid; // after child is done communicating with client, it dies
         }
         else
         { // refers to parent fork
-            // printf("My pid is %d\n", getpid());
+            int status;
             wait(&status);
+            close(fds[1]);
+            read(fds[0], &(client_pids[i]), sizeof(int));
         }
     }
+
+    for (i = 0; i < num_clients; i++)
+    {
+        int j;
+        char fifo[BUF_SIZE];
+        sprintf(fifo, "%dz", 1212);
+        mkfifo(fifo, 0666);
+        int fd;
+        fd = open(fifo, O_WRONLY);
+        write(fd, &num_clients, sizeof(int));
+
+        for (j = 0; j < num_clients; j++)
+        {
+            if (j == i)
+            {
+                continue;
+            }
+            write(fd, &(client_pids[j]), sizeof(int));
+        }
+    }
+
+    // remove("chat_fifo");
 }

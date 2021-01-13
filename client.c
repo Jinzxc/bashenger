@@ -17,12 +17,23 @@ void check_error(int status)
         printf("Error (%d): %s\n", errno, strerror(errno));
     }
 }
+
+static void sighandler(int signo)
+{
+    if (signo == SIGINT)
+    {
+        char buffer[BUF_SIZE];
+        sprintf(buffer, "%dz", getpid());
+        remove(buffer);
+        exit(0);
+    }
+}
 void send_handshake()
 {
     char secret_path[BUF_SIZE];
     sprintf(secret_path, "%d", getpid());
     mkfifo(secret_path, 0666);
-    char wellknown[] = "./wkp";
+    char wellknown[] = "wkp";
     int status;
     int wkp, secret_pipe;
     wkp = open(wellknown, O_WRONLY);
@@ -45,18 +56,33 @@ void send_handshake()
 
 int main()
 {
+    signal(SIGINT, sighandler);
     send_handshake();
-    int client_pid;
-    client_pid = getpid();
-    char client_file[BUF_SIZE];
-    sprintf(client_file, "%d", client_pid);
+    char priv[BUF_SIZE];
+    sprintf(priv, "%dz", getpid());
+    printf("%d\n", getpid());
+    int num_clients = -52;
     int fd;
-    char buffer[BUF_SIZE];
+    fd = open(priv, O_RDONLY);
+    read(fd, &num_clients, sizeof(int));
+    printf("num_clients: %d\n", num_clients);
+    
+    // int other_clients[num_clients - 1];
+    // int i;
+    // for (i = 0; i < num_clients - 1; i++) {
+    //     read(fd, &(other_clients[i]), sizeof(int));
+    // }
+
+    // for (i = 0; i < num_clients - 1; i++) {
+    //     printf("%d\n", other_clients[i]);
+    // }
     while (1)
     {
-        fgets(buffer, BUF_SIZE, stdin);
-        printf("About to write: %s\n", buffer);
-        fd = open(client_file, O_WRONLY);
-        write(fd, buffer, BUF_SIZE);
+        // printf("reading...\n");
+        // read(chat, text, BUF_SIZE);
+        // printf("%s\n", text);
+        // fgets(buffer, BUF_SIZE, stdin);
+        // printf("About to write: %s\n", buffer);
+        // write(fd, buffer, BUF_SIZE);
     }
 }
