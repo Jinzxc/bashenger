@@ -59,18 +59,19 @@ int main()
     signal(SIGINT, sighandler);
     int secret_pipe = send_handshake();
     int num_clients = -52;
+    sleep(5);
     read(secret_pipe, &num_clients, sizeof(int));
     printf("num_clients: %d\n", num_clients);
     
-    // int other_clients[num_clients - 1];
-    // int i;
-    // for (i = 0; i < num_clients - 1; i++) {
-    //     read(fd, &(other_clients[i]), sizeof(int));
-    // }
+    int other_clients[num_clients - 1];
+    int i;
+    for (i = 0; i < num_clients - 1; i++) {
+        read(secret_pipe, &(other_clients[i]), sizeof(int));
+    }
 
-    // for (i = 0; i < num_clients - 1; i++) {
-    //     printf("%d\n", other_clients[i]);
-    // }
+    for (i = 0; i < num_clients - 1; i++) {
+        printf("%d\n", other_clients[i]);
+    }
     while (1)
     {
         // printf("reading...\n");

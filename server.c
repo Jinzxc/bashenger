@@ -69,7 +69,7 @@ int main()
 
     // num_clients: the number of clients that will be talking in this given chat session.
     // for now, num_clients=2. When we work on group chat function, there will be additional logic to sort that out.
-    int num_clients = 1;
+    int num_clients = 2;
     int client_pids[num_clients];
     // for each client, fork a handshake process
     int i;
@@ -116,6 +116,14 @@ int main()
                 continue;
             }
             write(fd, &(client_pids[j]), sizeof(int));
+        }
+        for (j = i + 1; j < num_clients; j++) {
+            char p1[BUF_SIZE * 2];
+            char p2[BUF_SIZE * 2];
+            sprintf(p1, "%d_%d", client_pids[i], client_pids[j]);
+            sprintf(p2, "%d_%d", client_pids[j], client_pids[i]);
+            mkfifo(p1, 0666);
+            mkfifo(p2, 0666);
         }
     }
 
