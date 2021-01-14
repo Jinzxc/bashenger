@@ -1,13 +1,18 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
 #include <unistd.h>
 #include <fcntl.h>
+
+#include <signal.h>
+#include <errno.h>
+#include <sys/errno.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <string.h>
-#include <sys/errno.h>
-#include <errno.h>
-#include <signal.h>
-#include <stdlib.h>
 #define BUF_SIZE 256
 
 void check_error(int status)
@@ -63,15 +68,31 @@ int main()
     read(secret_pipe, &num_clients, sizeof(int));
     printf("num_clients: %d\n", num_clients);
     
-    int other_clients[num_clients - 1];
+    int all_clients[num_clients];
+    int pair_of_clients = (num_clients) * (num_clients - 1) / 2;
+    int shared_mems[num_clients - 1];
     int i;
+    read(secret_pipe, all_clients, num_clients * sizeof(int));
+    for (i = 0; i < num_clients; i++) {
+        printf("%d ", all_clients[i]);
+    }
+    int shmd;
     for (i = 0; i < num_clients - 1; i++) {
-        read(secret_pipe, &(other_clients[i]), sizeof(int));
+        int pairs[2];
+        read(secret_pipe, pairs, 2 * sizeof(int));
+        // int prime_1 = (int)(pow(2, pairs[0]));
+        // int prime_2 = (int)(pow(3, pairs[1]));
+        shmd = shmget(pairs[0] * pairs[1], 0, 0);
+        shared_mems[i] = shmd;
     }
 
+
+    
+    printf("\n");
     for (i = 0; i < num_clients - 1; i++) {
-        printf("%d\n", other_clients[i]);
+        printf("%d ", shared_mems[i]);
     }
+    printf("\n");
     while (1)
     {
         // printf("reading...\n");

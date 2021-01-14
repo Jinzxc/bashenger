@@ -1,13 +1,19 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <stdlib.h>
+
+#include <signal.h>
+#include <errno.h>
+#include <sys/errno.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
 #include <sys/types.h>
 #include <ctype.h>
 #include <sys/stat.h>
-#include <sys/errno.h>
-#include <string.h>
-#include <errno.h>
+
 #define BUF_SIZE 256
 
 void check_error(int status)
@@ -69,7 +75,7 @@ int main()
 
     // num_clients: the number of clients that will be talking in this given chat session.
     // for now, num_clients=2. When we work on group chat function, there will be additional logic to sort that out.
-    int num_clients = 2;
+    int num_clients = 4;
     int client_pids[num_clients];
     // for each client, fork a handshake process
     int i;
@@ -98,7 +104,10 @@ int main()
             read(fds[0], &(client_pids[i]), sizeof(int));
         }
     }
-
+    int pair_of_clients;
+    pair_of_clients = (num_clients) * (num_clients - 1) / 2;
+    int shared_mems[pair_of_clients];
+    int k = 0;
     for (i = 0; i < num_clients; i++)
     {
         int j;
@@ -108,16 +117,9 @@ int main()
         fd = open(fifo, O_WRONLY);
         printf("writing...\n");
         write(fd, &num_clients, sizeof(int));
-
-        for (j = 0; j < num_clients; j++)
+        write(fd, client_pids, num_clients * sizeof(int));
+        for (j = i + 1; j < num_clients; j++)
         {
-            if (j == i)
-            {
-                continue;
-            }
-            write(fd, &(client_pids[j]), sizeof(int));
-        }
-        for (j = i + 1; j < num_clients; j++) {
             char p1[BUF_SIZE * 2];
             char p2[BUF_SIZE * 2];
             sprintf(p1, "%d_%d", client_pids[i], client_pids[j]);
@@ -125,6 +127,43 @@ int main()
             mkfifo(p1, 0666);
             mkfifo(p2, 0666);
         }
+
+        for (j = 0; j < num_clients; j++)
+        {
+            if (j == i)
+            {
+                continue;
+            }
+            int *data;
+            int shmd;
+            int prime_1;
+            int prime_2;
+            if (j < i)
+            {
+                prime_1 = (int)(pow(2, j));
+                prime_2 = (int)(pow(3, i));
+            }
+            else
+            {
+                prime_1 = (int)(pow(2, i));
+                prime_2 = (int)(pow(3, j));
+            }
+            shmd = shmget(prime_1 * prime_2, 0, 0);
+            if (shmd == -1)
+            {
+                shmd = shmget(prime_1 * prime_2, BUF_SIZE, IPC_CREAT | 0640);
+                shared_mems[k] = shmd;
+                k += 1;
+            }
+            write(fd, &prime_1, sizeof(int));
+            write(fd, &prime_2, sizeof(int));
+        }
+    }
+    sleep(5);
+    for (i = 0; i < pair_of_clients; i++)
+    {
+        printf("shared_memory: %d\n", shared_mems[i]);
+        shmctl(shared_mems[i], IPC_RMID, 0);
     }
 
     // remove("chat_fifo");
