@@ -4,7 +4,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <fcntl.h>
-
+#include <time.h>
 #include <signal.h>
 #include <errno.h>
 #include <sys/errno.h>
@@ -134,35 +134,49 @@ int main()
             {
                 continue;
             }
-            int *data;
+            time_t *data;
             int shmd;
             int prime_1;
             int prime_2;
             if (j < i)
             {
-                prime_1 = (int)(pow(5, j));
-                prime_2 = (int)(pow(7, i));
+                prime_1 = (int)(pow(2, j));
+                prime_2 = (int)(pow(3, i));
             }
             else
             {
-                prime_1 = (int)(pow(5, i));
-                prime_2 = (int)(pow(7, j));
+                prime_1 = (int)(pow(2, i));
+                prime_2 = (int)(pow(3, j));
             }
             shmd = shmget(prime_1 * prime_2, 0, 0);
             if (shmd == -1)
             {
-                shmd = shmget(prime_1 * prime_2, BUF_SIZE, IPC_CREAT | 0640);
+                shmd = shmget(prime_1 * prime_2, BUF_SIZE, IPC_CREAT | 0660);
                 shared_mems[k] = shmd;
                 k += 1;
             }
             write(fd, &prime_1, sizeof(int));
             write(fd, &prime_2, sizeof(int));
+            data = shmat(shmd, 0, 0);
+            *data = time(NULL);
+            shmdt(data);
         }
     }
     sleep(5);
     for (i = 0; i < pair_of_clients; i++)
     {
-        printf("shared_memory: %d\n", shared_mems[i]);
+        printf("shared_memory: %d ", shared_mems[i]);
+        int shm_id = shared_mems[i];
+        struct shmid_ds *shm;
+        shmctl(shm_id, IPC_STAT, shm);
+        key_t key;
+        key = (shm->shm_perm)._key;
+        // // if (last_modified_time != *data) {
+        // //     // read from client_client pair pipe
+        // //     int client_pair[2];
+        // //     // client_pair = decrypt(shm_seg);
+        // // }
+        // printf("key: %d\n", key);
         shmctl(shared_mems[i], IPC_RMID, 0);
     }
 

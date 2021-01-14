@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 
+#include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -50,7 +51,6 @@ int send_handshake()
     char msg[BUF_SIZE];
     status = read(secret_pipe, msg, BUF_SIZE);
     check_error(status);
-    // remove(secret_path);
     // letting server know we got acknowledgement
     char confirm_msg[] = "Yeah got the acknowledgement!\n";
     status = write(wkp, confirm_msg, sizeof(confirm_msg));
@@ -70,6 +70,7 @@ int main()
     
     int all_clients[num_clients];
     int pair_of_clients = (num_clients) * (num_clients - 1) / 2;
+    int last_modified_times[num_clients - 1];
     int shared_mems[num_clients - 1];
     int i;
     read(secret_pipe, all_clients, num_clients * sizeof(int));
@@ -80,26 +81,38 @@ int main()
     for (i = 0; i < num_clients - 1; i++) {
         int pairs[2];
         read(secret_pipe, pairs, 2 * sizeof(int));
-        // int prime_1 = (int)(pow(2, pairs[0]));
-        // int prime_2 = (int)(pow(3, pairs[1]));
         shmd = shmget(pairs[0] * pairs[1], 0, 0);
         shared_mems[i] = shmd;
     }
 
-
-    
     printf("\n");
+    time_t last_modified = time(NULL);
+    time_t *data;
     for (i = 0; i < num_clients - 1; i++) {
         printf("%d ", shared_mems[i]);
+        data = shmat(shared_mems[i], 0, 0);
+        printf("%ld\n", *data);
+        last_modified = *data;
+        last_modified_times[i] = last_modified;
+        shmdt(data);
     }
     printf("\n");
     while (1)
     {
-        // printf("reading...\n");
-        // read(chat, text, BUF_SIZE);
-        // printf("%s\n", text);
-        // fgets(buffer, BUF_SIZE, stdin);
-        // printf("About to write: %s\n", buffer);
-        // write(fd, buffer, BUF_SIZE);
+        // int i;
+        // for (i = 0; i < num_clients - 1; i++) {
+        //     int shm_id = shared_mems[i];
+        //     int last_modified_time = last_modified_times[i];
+        //     data = shmat(shm_id, 0, 0);
+        //     struct shmid_ds *shm;
+        //     shmctl(shm_id, IPC_STAT, shm);
+        //     int key;
+        //     key = shm->shm_perm._key;
+        //     if (last_modified_time != *data) {
+        //         // read from client_client pair pipe
+        //         int client_pair[2];
+        //         // client_pair = decrypt(shm_seg);
+        //     }
+        // }
     }
 }
