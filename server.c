@@ -24,6 +24,8 @@ void check_error(int status)
     }
 }
 
+
+
 int setup_new_handshake()
 {
     printf("Awaiting Client Connection...\n");
@@ -118,6 +120,7 @@ int main()
         printf("writing...\n");
         write(fd, &num_clients, sizeof(int));
         write(fd, client_pids, num_clients * sizeof(int));
+
         for (j = i + 1; j < num_clients; j++)
         {
             char p1[BUF_SIZE * 2];
@@ -130,55 +133,97 @@ int main()
 
         for (j = 0; j < num_clients; j++)
         {
+
             if (j == i)
             {
                 continue;
             }
-            time_t *data;
-            int shmd;
+            char p1[BUF_SIZE * 2];
+            char p2[BUF_SIZE * 2];
+            sprintf(p1, "%d_%d", client_pids[i], client_pids[j]);
+            sprintf(p2, "%d_%d", client_pids[j], client_pids[i]);
+            char *path_for_key;
             int prime_1;
             int prime_2;
-            if (j < i)
-            {
-                prime_1 = (int)(pow(2, j));
-                prime_2 = (int)(pow(3, i));
-            }
-            else
+            if (j > i)
             {
                 prime_1 = (int)(pow(2, i));
                 prime_2 = (int)(pow(3, j));
+                path_for_key = p1;
             }
-            shmd = shmget(prime_1 * prime_2, 0, 0);
+            else
+            {
+                prime_1 = (int)(pow(2, j));
+                prime_2 = (int)(pow(3, i));
+                path_for_key = p2;
+            }
+            key_t key;
+            int *data;
+            int shmd;
+
+            key = ftok(path_for_key, prime_1 * prime_2);
+            shmd = shmget(key, 0, 0);
             if (shmd == -1)
             {
-                shmd = shmget(prime_1 * prime_2, BUF_SIZE, IPC_CREAT | 0660);
+                shmd = shmget(key, BUF_SIZE, IPC_CREAT | 0660);
                 shared_mems[k] = shmd;
                 k += 1;
+
             }
-            write(fd, &prime_1, sizeof(int));
-            write(fd, &prime_2, sizeof(int));
+            write(fd, &key, sizeof(key_t));
             data = shmat(shmd, 0, 0);
             *data = time(NULL);
             shmdt(data);
         }
     }
-    sleep(5);
-    for (i = 0; i < pair_of_clients; i++)
-    {
-        printf("shared_memory: %d ", shared_mems[i]);
-        int shm_id = shared_mems[i];
-        struct shmid_ds *shm;
-        shmctl(shm_id, IPC_STAT, shm);
-        key_t key;
-        key = (shm->shm_perm)._key;
-        // // if (last_modified_time != *data) {
-        // //     // read from client_client pair pipe
-        // //     int client_pair[2];
-        // //     // client_pair = decrypt(shm_seg);
-        // // }
-        // printf("key: %d\n", key);
-        shmctl(shared_mems[i], IPC_RMID, 0);
-    }
 
-    // remove("chat_fifo");
-}
+        // for (j = 0; j < num_clients; j++)
+        // {
+        //     if (j == i)
+        //     {
+        //         continue;
+        //     }
+        //     time_t *data;
+        //     int shmd;
+        //     int prime_1;
+        //     int prime_2;
+        //     if (j < i)
+        //     {
+        //         prime_1 = (int)(pow(2, j));
+        //         prime_2 = (int)(pow(3, i));
+        //     }
+        //     else
+        //     {
+        //         prime_1 = (int)(pow(2, i));
+        //         prime_2 = (int)(pow(3, j));
+        //     }
+        //     shmd = shmget(prime_1 * prime_2, 0, 0);
+        //     if (shmd == -1)
+        //     {
+        //         shmd = shmget(prime_1 * prime_2, BUF_SIZE, IPC_CREAT | 0660);
+        //         shared_mems[k] = shmd;
+        //         k += 1;
+        //     }
+        //     write(fd, &prime_1, sizeof(int));
+        //     write(fd, &prime_2, sizeof(int));
+        //     data = shmat(shmd, 0, 0);
+        //     *data = time(NULL);
+        //     shmdt(data);
+        // }
+        // }
+        sleep(15);
+        for (i = 0; i < pair_of_clients; i++)
+        {
+            printf("shared_memory: %d ", shared_mems[i]);
+            // // if (last_modified_time != *data) {
+            // //     // read from client_client pair pipe
+            // //     int client_pair[2];
+            // //     // client_pair = decrypt(shm_seg);
+            // // }
+            // printf("key: %d\n", key);
+            shmctl(shared_mems[i], IPC_RMID, 0);
+        }
+        printf("\n");
+
+        // remove("chat_fifo");
+    }
