@@ -64,7 +64,7 @@ int main()
     signal(SIGINT, sighandler);
     int secret_pipe = send_handshake();
     int num_clients = -52;
-    sleep(5);
+    sleep(3);
     read(secret_pipe, &num_clients, sizeof(int));
     printf("num_clients: %d\n", num_clients);
     

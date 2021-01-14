@@ -75,7 +75,7 @@ int main()
 
     // num_clients: the number of clients that will be talking in this given chat session.
     // for now, num_clients=2. When we work on group chat function, there will be additional logic to sort that out.
-    int num_clients = 4;
+    int num_clients = 3;
     int client_pids[num_clients];
     // for each client, fork a handshake process
     int i;
@@ -140,13 +140,13 @@ int main()
             int prime_2;
             if (j < i)
             {
-                prime_1 = (int)(pow(2, j));
-                prime_2 = (int)(pow(3, i));
+                prime_1 = (int)(pow(5, j));
+                prime_2 = (int)(pow(7, i));
             }
             else
             {
-                prime_1 = (int)(pow(2, i));
-                prime_2 = (int)(pow(3, j));
+                prime_1 = (int)(pow(5, i));
+                prime_2 = (int)(pow(7, j));
             }
             shmd = shmget(prime_1 * prime_2, 0, 0);
             if (shmd == -1)
