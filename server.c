@@ -96,18 +96,18 @@ int main()
             client_pid = setup_new_handshake();
             close(fds[0]);
             write(fds[1], &client_pid, sizeof(int));
-            return client_pid; // after child is done communicating with client, it dies
+            exit(0); // after child is done communicating with client, it dies
         }
         else
         { // refers to parent fork
             int status;
-            wait(&status);
+            wait(&status); // parent waits for child to finish handshake
             close(fds[1]);
-            read(fds[0], &(client_pids[i]), sizeof(int));
+            read(fds[0], &(client_pids[i]), sizeof(int)); // gets client_pid info from child using unnamed pipes
         }
     }
     int pair_of_clients;
-    pair_of_clients = (num_clients) * (num_clients - 1) / 2;
+    pair_of_clients = (num_clients) * (num_clients - 1) / 2; // equivalent to n choose 2. determines number of shared mem segments needed for group chat. 
     int shared_mems[pair_of_clients];
     int k = 0;
     for (i = 0; i < num_clients; i++)
@@ -118,11 +118,12 @@ int main()
         int fd;
         fd = open(fifo, O_WRONLY);
         printf("writing...\n");
-        write(fd, &num_clients, sizeof(int));
-        write(fd, client_pids, num_clients * sizeof(int));
+        write(fd, &num_clients, sizeof(int)); // tell each client the number of participants in the chat. 
+        write(fd, client_pids, num_clients * sizeof(int)); // give each client the list of participants
 
         for (j = i + 1; j < num_clients; j++)
         {
+            // in this loop, the server makes two unique pipes for each client-client pair
             char p1[BUF_SIZE * 2];
             char p2[BUF_SIZE * 2];
             sprintf(p1, "%d_%d", client_pids[i], client_pids[j]);
@@ -136,13 +137,17 @@ int main()
 
             if (j == i)
             {
+                // a client-client pair involving only 1 client (duplicated) shouldn't be allowed
                 continue;
             }
+
             char p1[BUF_SIZE * 2];
             char p2[BUF_SIZE * 2];
             sprintf(p1, "%d_%d", client_pids[i], client_pids[j]);
             sprintf(p2, "%d_%d", client_pids[j], client_pids[i]);
             char *path_for_key;
+            // prime_1 and prime_2 multiply to create a unique id for the ftok() algorithm
+
             int prime_1;
             int prime_2;
             if (j > i)
@@ -160,7 +165,7 @@ int main()
             key_t key;
             time_t *data;
             int shmd;
-
+            // ftok takes a file path and a id and creates an unique key to use with shmget
             key = ftok(path_for_key, prime_1 * prime_2);
             shmd = shmget(key, 0, 0);
             if (shmd == -1)
@@ -170,27 +175,24 @@ int main()
                 k += 1;
 
             }
+            // Give the client the key
             write(fd, &key, sizeof(key_t));
             data = shmat(shmd, 0, 0);
+            // initiate a last_modified time 
             *data = time(NULL);
             printf("last_modified: %ld\n", *data);
             shmdt(data);
         }
     }
 
+
+        // because there's no main.c connecting to the group chat functionality, this server will keep the chat going for 60 secondds
+        // TODO: find a way to not use sleep and instead remove all shared_mem segments upon termination of program. 
         sleep(60);
         for (i = 0; i < pair_of_clients; i++)
         {
             printf("shared_memory: %d ", shared_mems[i]);
-            // // if (last_modified_time != *data) {
-            // //     // read from client_client pair pipe
-            // //     int client_pair[2];
-            // //     // client_pair = decrypt(shm_seg);
-            // // }
-            // printf("key: %d\n", key);
             shmctl(shared_mems[i], IPC_RMID, 0);
         }
         printf("\n");
-
-        // remove("chat_fifo");
     }

@@ -65,8 +65,11 @@ int main()
 {
     signal(SIGINT, sighandler);
     int secret_pipe = send_handshake();
-    int num_clients = -52;
+    int num_clients;
+    // THIS SLEEP FUNCITON MUST BE REPLACED WITH BETTER LOGIC
     sleep(4);
+    
+    // client gets number of participants from server
     read(secret_pipe, &num_clients, sizeof(int));
     printf("num_clients: %d\n", num_clients);
 
@@ -75,12 +78,14 @@ int main()
     int last_modified_times[num_clients - 1];
     int shared_mems[num_clients - 1];
     int i;
+    // store all clients in chat to an array
     read(secret_pipe, all_clients, num_clients * sizeof(int));
     for (i = 0; i < num_clients; i++)
     {
         printf("%d ", all_clients[i]);
     }
     int shmd;
+    // each client gets the keys that pertain to the client-client pair that it's a part of. 
     for (i = 0; i < num_clients - 1; i++)
     {
         key_t key;
@@ -92,6 +97,7 @@ int main()
 
     printf("\n");
     time_t last_modified = time(NULL);
+    // store the last_modified times from all relevant shared_mem segments for later comparison when reading from other clients
     time_t *data;
     for (i = 0; i < num_clients - 1; i++)
     {
@@ -104,6 +110,7 @@ int main()
     }
     int p;
     int *sending_message;
+    // creating a shared_mem segment for simple reading from stdin and using child process to write to other clients
     int pipe_shmd;
     pipe_shmd = shmget(24601 + getpid(), sizeof(int), IPC_CREAT | 0660);
     sending_message = shmat(pipe_shmd, 0, 0);
@@ -120,7 +127,7 @@ int main()
         {
             char buffer[BUF_SIZE];
             int *sending_message = shmat(pipe_shmd, 0, 0);
-            *sending_message = 1;
+            *sending_message = 1; // this effectively makes sure a child process is created only when there's a new fgets call. 
             printf("enter message: ");
             fgets(buffer, BUF_SIZE, stdin);
             printf("\nyou wrote: %s\n", buffer);
@@ -169,11 +176,13 @@ int main()
                 shmd = shmget(key, 0, 0);
                 int fd;
                 last_modified = shmat(shmd, 0, 0);
+                // set the last_modified time for all relevant shared_mem segments to current time
                 *last_modified = time(NULL);
                 // printf("last_modified_sending %ld\n", *last_modified);
                 shmdt(last_modified);
+                // write message to all other clients
                 fd = open(p2, O_WRONLY);
-                write(fd, buffer, strlen(buffer));
+                write(fd, buffer, BUF_SIZE);
             }
             shmdt(sending_message);
             exit(0);
@@ -241,7 +250,6 @@ int main()
                 shmdt(data);
                 if (last_modified != shmd_last_modified)
                 {
-                    // printf("HI FROM READ SIDE\n");
                     int f;
                     f = fork();
                     int status;
@@ -255,6 +263,9 @@ int main()
                         *data = time(NULL);
                         last_modified_times[last_modified_index] = *data;
                         exit(0);
+                    }
+                    else {
+                        wait(&status);
                     }
                 }
             }
