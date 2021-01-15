@@ -77,7 +77,7 @@ int main()
 
     // num_clients: the number of clients that will be talking in this given chat session.
     // for now, num_clients=2. When we work on group chat function, there will be additional logic to sort that out.
-    int num_clients = 3;
+    int num_clients = 2;
     int client_pids[num_clients];
     // for each client, fork a handshake process
     int i;
@@ -158,7 +158,7 @@ int main()
                 path_for_key = p2;
             }
             key_t key;
-            int *data;
+            time_t *data;
             int shmd;
 
             key = ftok(path_for_key, prime_1 * prime_2);
@@ -173,45 +173,12 @@ int main()
             write(fd, &key, sizeof(key_t));
             data = shmat(shmd, 0, 0);
             *data = time(NULL);
+            printf("last_modified: %ld\n", *data);
             shmdt(data);
         }
     }
 
-        // for (j = 0; j < num_clients; j++)
-        // {
-        //     if (j == i)
-        //     {
-        //         continue;
-        //     }
-        //     time_t *data;
-        //     int shmd;
-        //     int prime_1;
-        //     int prime_2;
-        //     if (j < i)
-        //     {
-        //         prime_1 = (int)(pow(2, j));
-        //         prime_2 = (int)(pow(3, i));
-        //     }
-        //     else
-        //     {
-        //         prime_1 = (int)(pow(2, i));
-        //         prime_2 = (int)(pow(3, j));
-        //     }
-        //     shmd = shmget(prime_1 * prime_2, 0, 0);
-        //     if (shmd == -1)
-        //     {
-        //         shmd = shmget(prime_1 * prime_2, BUF_SIZE, IPC_CREAT | 0660);
-        //         shared_mems[k] = shmd;
-        //         k += 1;
-        //     }
-        //     write(fd, &prime_1, sizeof(int));
-        //     write(fd, &prime_2, sizeof(int));
-        //     data = shmat(shmd, 0, 0);
-        //     *data = time(NULL);
-        //     shmdt(data);
-        // }
-        // }
-        sleep(15);
+        sleep(60);
         for (i = 0; i < pair_of_clients; i++)
         {
             printf("shared_memory: %d ", shared_mems[i]);
