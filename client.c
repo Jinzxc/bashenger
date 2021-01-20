@@ -14,6 +14,7 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #define BUF_SIZE 256
 
 void check_error(int status)
