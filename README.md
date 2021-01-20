@@ -69,3 +69,7 @@ Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 
 # DEVLOG
 1/12 - Victor - Added functions for adding, deleting, and listing friends for a given friend
+1/13 - Michael - Implemented handshaking between server and client(s). Implemented client-client FIFOs.
+1/14 - Michael - Implemented shared memory segments for each client-client pair.
+1/15 - Michael - Finished group chat functionality assuming all clients are connected. 
+ 
