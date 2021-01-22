@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #define BUF_SIZE 256
+#define MAX_CLIENTS 10
 
 void check_error(int status)
 {
@@ -37,15 +38,20 @@ static void sighandler(int signo)
         exit(0);
     }
 }
+
 int send_handshake()
 {
-    char secret_path[BUF_SIZE];
-    sprintf(secret_path, "%d", getpid());
-    mkfifo(secret_path, 0666);
     char wellknown[] = "wkp";
-    int status;
     int wkp, secret_pipe;
     wkp = open(wellknown, O_WRONLY);
+    if (wkp == -1) {
+        printf("Server is offline.\n");
+        exit(0);
+    }
+    char secret_path[BUF_SIZE];
+    sprintf(secret_path, "%d", getpid());
+    mkfifo(secret_path, 0664);
+    int status;
     status = write(wkp, secret_path, 4 * strlen(secret_path));
     secret_pipe = open(secret_path, O_RDONLY);
     // sending initial connection request to server
@@ -62,57 +68,80 @@ int send_handshake()
     return secret_pipe;
 }
 
+int read_client(int secret_pipe, int * client_pid, key_t * client_mem) {
+    int flags = fcntl(secret_pipe, F_GETFL, 0);
+    fcntl(secret_pipe, F_SETFL, flags | O_NONBLOCK);
+    int status;
+    status = read(secret_pipe, client_pid, sizeof(int));
+    printf("client_pid: %d\n", *client_pid);
+    if (*client_pid == 0) {
+        printf("Client pid is 0\n");
+        return -1;
+    }
+    key_t key;
+    status = read(secret_pipe, &key, sizeof(key_t));
+    printf("key %d", key);
+    *client_mem = key;
+    printf("client_mem: %d\n", *client_mem);
+    if (*client_mem == 0) {
+        printf("client mem is 0\n");
+        return -1;
+    }
+    return 0;
+}
+
 int main()
 {
     signal(SIGINT, sighandler);
-    int secret_pipe = send_handshake();
-    int num_clients;
-    // THIS SLEEP FUNCITON MUST BE REPLACED WITH BETTER LOGIC
-    sleep(4);
     
-    // client gets number of participants from server
-    read(secret_pipe, &num_clients, sizeof(int));
-    printf("num_clients: %d\n", num_clients);
-
-    int all_clients[num_clients];
-    int pair_of_clients = (num_clients) * (num_clients - 1) / 2;
-    int last_modified_times[num_clients - 1];
-    int shared_mems[num_clients - 1];
-    int i;
-    // store all clients in chat to an array
-    read(secret_pipe, all_clients, num_clients * sizeof(int));
-    for (i = 0; i < num_clients; i++)
-    {
-        printf("%d ", all_clients[i]);
+    key_t * shared_mems = malloc(MAX_CLIENTS * sizeof(key_t));
+    int * all_clients = malloc(MAX_CLIENTS * sizeof(int));
+    int * last_modified_times = malloc(MAX_CLIENTS * sizeof(int));
+    
+    int secret_pipe = send_handshake();
+    
+    int key;
+    read(secret_pipe, &key, sizeof(key_t));
+    shared_mems[0] = key;
+    all_clients[0] = getpid();
+     
+    int i = 1;
+    while (i < MAX_CLIENTS) {
+        int status = 0; 
+        // read all clients in
+        status = read_client(secret_pipe, &all_clients[i], &shared_mems[i]);
+        printf("first_status: %d\n", status);
+        while (status == 0) {
+            i++;
+            status = read_client(secret_pipe, &all_clients[i], &shared_mems[i]);
+        }
+        
+        fcntl(secret_pipe, F_SETFL, O_RDONLY);
+        int j;
+        printf("i: %d\n", i);
+        for (j = 0; all_clients[j] != 0; j++)
+        {
+            printf("%d: %d\n", j, all_clients[j]);
+            printf("%d: %d\n", j, shared_mems[j]);
+        }
+        time_t last_modified = time(NULL);
+        // store the last_modified times from all relevant shared_mem segments for later comparison when reading from other clients
+        time_t *data;
+        for (j = 0; all_clients[j] != 0; j++) {
+            printf("%d ", shared_mems[j]);
+            int shmd;
+            shmd = shmget(shared_mems[j], 0, 0);
+            data = shmat(shmd, 0, 0);
+            printf("%ld\n", *data);
+            last_modified = *data;
+            last_modified_times[i] = last_modified;
+            shmdt(data);
+        }
+        int p;
+        int *sending_message;
     }
-    int shmd;
-    // each client gets the keys that pertain to the client-client pair that it's a part of. 
-    for (i = 0; i < num_clients - 1; i++)
-    {
-        key_t key;
-        read(secret_pipe, &key, sizeof(int));
-        shmd = shmget(key, 0, 0);
-        shared_mems[i] = shmd;
-        printf("shmd: %d\n", shmd);
-    }
-
-    printf("\n");
-    time_t last_modified = time(NULL);
-    // store the last_modified times from all relevant shared_mem segments for later comparison when reading from other clients
-    time_t *data;
-    for (i = 0; i < num_clients - 1; i++)
-    {
-        printf("%d ", shared_mems[i]);
-        data = shmat(shared_mems[i], 0, 0);
-        printf("%ld\n", *data);
-        last_modified = *data;
-        last_modified_times[i] = last_modified;
-        shmdt(data);
-    }
-    int p;
-    int *sending_message;
+    /*
     // creating a shared_mem segment for simple reading from stdin and using child process to write to other clients
-    int pipe_shmd;
     pipe_shmd = shmget(24601 + getpid(), sizeof(int), IPC_CREAT | 0660);
     sending_message = shmat(pipe_shmd, 0, 0);
     *sending_message = 0;
@@ -272,5 +301,5 @@ int main()
             }
         }
         sleep(1);
-    }
+    }*/
 }

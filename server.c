@@ -17,6 +17,14 @@
 
 #define BUF_SIZE 256
 
+static void sighandler(int signo) {
+    if (signo == SIGINT) {
+        unlink("./wkp");
+        unlink("*_*");
+        exit(0);
+    }
+}
+
 void check_error(int status)
 {
     if (status == -1)
@@ -25,9 +33,7 @@ void check_error(int status)
     }
 }
 
-
-
-void setup_new_client(int * id, int * shmd) {
+void setup_new_client(int * id, key_t * key) {
     printf("Awaiting Client Connection...\n");
     // wkp stands for the server's well known pipe
     int client_pid;
@@ -54,25 +60,25 @@ void setup_new_client(int * id, int * shmd) {
     printf("Handshake established! Received final confirmation message: %s\n\n", final_confirmation);
 
     // Create unique shared memory for client
-    key_t key;
     time_t *data;
 
     // ftok takes a file path and a id and creates an unique key to use with shmget
-    key = ftok(secret_path, atoi(secret_path));
-    *shmd = shmget(key, 0, 0);
-    if (*shmd == -1) {
-        *shmd = shmget(key, BUF_SIZE, IPC_CREAT | 0660);
+    *key = ftok(secret_path, atoi(secret_path));
+    int shmd;
+    shmd = shmget(*key, 0, 0);
+    if (shmd == -1) {
+        shmd = shmget(*key, BUF_SIZE, IPC_CREAT | 0660);
     }
     // Give the client the key
-    write(fd, &key, sizeof(key_t));
-    data = shmat(*shmd, 0, 0);
+    status = write(secret_pipe, key, sizeof(key_t));
+    check_error(status);
+    data = shmat(shmd, 0, 0);
     // initiate a last_modified time 
     *data = time(NULL);
     printf("last_modified: %ld\n", *data);
     shmdt(data);
     close(fd);
     *id = atoi(secret_path);
-
 }
 
 void read_message(char *client_pid)
@@ -89,7 +95,7 @@ void read_message(char *client_pid)
     printf("%s\n", buffer);
 }
 
-void fix_array(int * arr, int max_clients) {
+int fix_array(int * arr, int max_clients) {
     int i = 0;
     int curr = 0;
     for (int i = 0; i < max_clients; i++) {
@@ -98,37 +104,54 @@ void fix_array(int * arr, int max_clients) {
             curr++;
         }
     }
+    return curr;
 }
 
 
 int main() {
+    signal(SIGINT, sighandler);
     int max_clients = 10;
     int client_pids[max_clients];
-    int shared_mems[max_clients];
+    key_t shared_mems[max_clients];
     // for each client, fork a handshake process
     int i = 0;
-    int id;
     while (i < max_clients) {
         setup_new_client(&client_pids[i], &shared_mems[i]);
-
+        char curr_fifo[BUF_SIZE];
+        sprintf(curr_fifo, "%d", client_pids[i]);
+        int curr_fd = open(curr_fifo, O_WRONLY);
         int k = 0;
         for (k = 0; k < i; k++)
         {
             time_t *data;
-            data = shmat(shared_mems[k], 0, 0);
+            int shmd;
+            shmd = shmget(shared_mems[k], 0, 0);
+            data = shmat(shmd, 0, 0);
             if (*data == time(0)) {
                 client_pids[k] = 0;
                 shared_mems[k] = 0;
-                fix_array(client_pids, 10);
-                fix_array(shared_mems, 10);
+                int reset = fix_array(client_pids, 10);
+                reset = fix_array(shared_mems, 10);
+                i = reset;
             }
+            shmdt(data);
             char fifo[BUF_SIZE];
             sprintf(fifo, "%d", client_pids[k]);
             int fd;
             fd = open(fifo, O_WRONLY);
             printf("writing current client to client %d...\n", client_pids[k]);
-            write(fd, &client_pids[i], sizeof(int)); // tell each client the new client 
+            int status;
+            printf("curr_client: %d %d\n", client_pids[k], shared_mems[k]);
+            printf("new_client: %d %d\n", client_pids[i], shared_mems[i]);
 
+            status = write(fd, &client_pids[i], sizeof(int)); // tell each client the new client 
+            check_error(status);
+            status = write(fd, &shared_mems[i], sizeof(key_t));
+            check_error(status);
+            status = write(curr_fd, &client_pids[k], sizeof(int));
+            check_error(status);
+            status = write(curr_fd, &shared_mems[k], sizeof(key_t));
+            check_error(status);
             // the server makes two unique pipes for each client-client pair
             char p1[BUF_SIZE * 2];
             char p2[BUF_SIZE * 2];
