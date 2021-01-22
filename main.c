@@ -20,10 +20,9 @@ void readin(char * buffer, int len)
 }
 
 // Password checker
-int pass_auth(char * pass, char * input, int pass_size, int user_size) 
+int pass_auth(char * pass, char * input, int pass_size) 
 {
-    char * password = &pass[user_size + 1];
-    if(!strncmp(password, input, pass_size - 1)) {
+    if(!strncmp(pass, input, strlen(input))) {
         printf("Authentication successful\n");
     } else {
         printf("Authentication failed\n");
@@ -37,7 +36,9 @@ int main()
 {
     char input_data[B_SIZE];
     char data[B_SIZE];
-    char username[B_SIZE];
+    char account[B_SIZE];
+
+    char * user_data;
 
     FILE *users;
 
@@ -52,11 +53,12 @@ int main()
     // Input username
     printf("Please enter a username: ");
     readin(input_data, B_SIZE);
-    int user_size = strlen(input_data);
 
     int got = 0;
     while(fgets(data, B_SIZE, users)) {
-        if(!strncmp(data, input_data, user_size)) {
+        user_data = strtok(data, ";"); // get the username
+        if(!strncmp(user_data, input_data, strlen(input_data))) {
+            user_data = strtok(NULL, ";"); // get the password
             got = 1;
             break;
         }
@@ -64,7 +66,7 @@ int main()
 
     // Display for new users
     if(!got) {
-        strncpy(username, input_data, B_SIZE);
+        strncpy(account, input_data, B_SIZE);
         printf("\nLooks like you are a new user. If so, please type a new password below.\nOtherwise exit the program\n\n");
     }
 
@@ -76,7 +78,7 @@ int main()
     if(got) {
         
         // Check password
-        int auth = pass_auth(data, input_data, pass_size, user_size);
+        int auth = pass_auth(user_data, input_data, pass_size);
         if(!auth) {
             fclose(users);
             return 0;
@@ -87,13 +89,13 @@ int main()
         // Add new user to the users list
         users = fopen ("users.txt", "a");
 
-        strcat(username, " ");
+        strcat(account, ";");
 
         // Completely not safe, storing password in plan text
-        strncat(username, input_data, B_SIZE);
-        strcat(username, "\n");
+        strncat(account, input_data, B_SIZE);
+        strcat(account, "\n");
 
-        fputs(username, users);
+        fputs(account, users);
     }
 
     fclose(users);
