@@ -17,66 +17,87 @@ int user_exists(char *filename) {
 
 // Returns a char ** of all friends
 char **get_friends(char *user) {
-    if (user_exists(user) != 0) {
+    if (!user_exists(user)) {
         return NULL;
     }
-    FILE * friend_list = fopen(user, O_RDONLY);
+    FILE * friend_list = fopen(user, "r");
     int friends = 0;
     char buffer[256];
-    while (fgets(buffer, sizeof buffer, friend_list) != NULL) {
+    while (fgets(buffer, sizeof buffer, friend_list)) {
         friends++;
     }
     fclose(friend_list);
-    friend_list = fopen(user, O_RDONLY);
+    friend_list = fopen(user, "r");
     char ** friend_array = malloc((friends + 1) * sizeof(char *));
     friend_array[friends] = NULL;
     int i = 0;
-    while (fgets(buffer, sizeof buffer, friend_list) != NULL) {
+    while (fgets(friend_array[i], sizeof buffer, friend_list)) {
         friend_array[i] = buffer;
         i++;
     }
     return friend_array;
 }
 
+// Lists all friends
+void list_friends(char *user) {
+    char **friends = get_friends(user);
+    if(!friends[0]) {
+        printf("You have no friends. Start by adding some!\n\n");
+        return;
+    }
+
+    printf("Your friends are:\n");
+
+    int i;
+    for(i = 0; friends[i]; i++) {
+        printf("%s\n", friends[i]);
+    }
+
+    free(friends);
+}
+
 // Appends friend to end of file, if user exists
 int add_friend(char *user, char *friend) {
-    if (user_exists(user) != 0) {
+    if (!user_exists(user)) {
         return -1;
     }
-    int friend_list = open(user, O_APPEND);
+    int friend_list = open(user, O_WRONLY | O_APPEND);
     if (friend_list == -1) {
         printf("Unable to find user\n");
         return -1;
     }
     int status;
-    status = write(friend_list, "\n", 2);
+    status = write(friend_list, friend, strlen(friend));
     if (status == -1) {
         printf("Unable to write to file\n");
     }
-    status = write(friend_list, friend, sizeof(friend));
+    status = write(friend_list, "\n", 1);
     if (status == -1) {
         printf("Unable to write to file\n");
     }
     return 1;
 }
 
-// Rewrites all friends into the file excapt for the friend removed
+// Rewrites all friends into the file except for the friend removed
 int remove_friend(char *user, char *friend) {
-    if (user_exists(user) != 0) {
+    if (!user_exists(user)) {
         return -1;
     }
     char ** friends = get_friends(user);
     int i = 0;
     int friend_list = open(user, O_WRONLY);
     int status;
-    while (friends[i] != NULL) {
-        if (strcmp(friends[i], friend) != 0) {
-            status = write(friend_list, friends[i], sizeof(friends[i]));
+    while (friends[i]) {
+        printf("%d", strncmp(friends[i], friend, strlen(friend)));
+        if (strncmp(friends[i], friend, strlen(friend))) {
+            printf("hello");
+            status = write(friend_list, friends[i], strlen(friends[i]));
+            write(friend_list, "\n", 1);
             if (status == -1) {
                 printf("Unable to write to file\n");
             }
-
         }
+        i++;
     }
     return 1;
 }
