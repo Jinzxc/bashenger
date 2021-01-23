@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "main.h"
+
 // Check to see if a file exists with name of the user
 int user_exists(char *filename) {
-     struct stat buffer;   
-     if (stat(filename, &buffer) == 0) {
+     struct stat buffer;
+     if (!stat(filename, &buffer)) {
          return 1;
      }
      return 0;
@@ -31,8 +33,10 @@ char **get_friends(char *user) {
     char ** friend_array = malloc((friends + 1) * sizeof(char *));
     friend_array[friends] = NULL;
     int i = 0;
-    while (fgets(friend_array[i], sizeof buffer, friend_list)) {
-        friend_array[i] = buffer;
+    while (fgets(buffer, sizeof buffer, friend_list)) {
+        char * friend = malloc(256 * sizeof(char));
+        strncpy(friend, buffer, strlen(buffer) - 1);
+        friend_array[i] = friend;
         i++;
     }
     return friend_array;
@@ -43,6 +47,7 @@ void list_friends(char *user) {
     char **friends = get_friends(user);
     if(!friends[0]) {
         printf("You have no friends. Start by adding some!\n\n");
+        free(friends);
         return;
     }
 
@@ -50,15 +55,20 @@ void list_friends(char *user) {
 
     int i;
     for(i = 0; friends[i]; i++) {
-        printf("%s\n", friends[i]);
+        printf("- %s\n", friends[i]);
+        free(friends[i]);
     }
 
+    printf("\n");
     free(friends);
 }
 
-// Appends friend to end of file, if user exists
+// Appends friend to end of file, if user and friend exists
 int add_friend(char *user, char *friend) {
     if (!user_exists(user)) {
+        return -1;
+    } else if(!user_exists(friend)) {
+        printf("User to be addded does not exists\n\n");
         return -1;
     }
     int friend_list = open(user, O_WRONLY | O_APPEND);
@@ -75,6 +85,9 @@ int add_friend(char *user, char *friend) {
     if (status == -1) {
         printf("Unable to write to file\n");
     }
+
+    printf("\n");
+    close(friend_list);
     return 1;
 }
 
@@ -82,22 +95,32 @@ int add_friend(char *user, char *friend) {
 int remove_friend(char *user, char *friend) {
     if (!user_exists(user)) {
         return -1;
+    } else if(!user_exists(friend)) {
+        printf("User to be removed does not exists\n\n");
+        return -1;
     }
     char ** friends = get_friends(user);
     int i = 0;
-    int friend_list = open(user, O_WRONLY);
+    char temp_id[20];
+    sprintf(temp_id, "%d", getpid()); 
+    int temp = open(temp_id, O_CREAT | O_WRONLY | O_APPEND, 0644);
     int status;
     while (friends[i]) {
-        printf("%d", strncmp(friends[i], friend, strlen(friend)));
-        if (strncmp(friends[i], friend, strlen(friend))) {
-            printf("hello");
-            status = write(friend_list, friends[i], strlen(friends[i]));
-            write(friend_list, "\n", 1);
+        if (!cmp(friends[i], friend)) {
+            status = write(temp, friends[i], strlen(friends[i]));
+            write(temp, "\n", 1);
             if (status == -1) {
                 printf("Unable to write to file\n");
             }
         }
+        free(friends[i]);
         i++;
     }
+
+    free(friends);
+    remove(user);
+    rename(temp_id, user);
+
+    printf("\n");
     return 1;
 }
