@@ -98,21 +98,28 @@ void read_message(char *client_pid)
 int fix_array(int * arr, int max_clients) {
     int i = 0;
     int curr = 0;
-    for (int i = 0; i < max_clients; i++) {
+    for (i = 0; i < max_clients; i++) {
         if (arr[i] != 0) {
             arr[curr] = arr[i];
             curr++;
         }
     }
-    return curr;
+    for (curr; curr < max_clients; curr++) {
+        arr[curr] = 0;
+    }
 }
 
+void print_array(int * arr, int max_clients) {
+    for (int i = 0; i < max_clients; i++) {
+        printf("\t%d: %d", i, arr[i]);
+    }
+}
 
 int main() {
     signal(SIGINT, sighandler);
     int max_clients = 10;
-    int client_pids[max_clients];
-    key_t shared_mems[max_clients];
+    int * client_pids = malloc(max_clients * sizeof(int));
+    key_t  * shared_mems = malloc(max_clients * sizeof(key_t));
     // for each client, fork a handshake process
     int i = 0;
     while (i < max_clients) {
@@ -121,20 +128,28 @@ int main() {
         sprintf(curr_fifo, "%d", client_pids[i]);
         int curr_fd = open(curr_fifo, O_WRONLY);
         int k = 0;
-        for (k = 0; k < i; k++)
-        {
+        for (k = 0; k < i; k++) {
             time_t *data;
             int shmd;
             shmd = shmget(shared_mems[k], 0, 0);
             data = shmat(shmd, 0, 0);
-            if (*data == time(0)) {
+            if (*data == 0) {
                 client_pids[k] = 0;
+                int shmd;
+                shmd = shmget(shared_mems[k], 0, 0);
+                shmctl(shmd, IPC_RMID, 0);
                 shared_mems[k] = 0;
                 int reset = fix_array(client_pids, 10);
                 reset = fix_array(shared_mems, 10);
-                i = reset;
+                print_array(client_pids, 10);
+                i -= 1;
+                k = -1;
+                continue;
             }
             shmdt(data);
+        }
+        for (k = 0; k < i; k++)
+        {
             char fifo[BUF_SIZE];
             sprintf(fifo, "%d", client_pids[k]);
             int fd;
