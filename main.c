@@ -22,32 +22,52 @@ void readin(char *buffer, int len)
         *strchr(buffer, '\n') = 0;
 }
 
+// safely compare two strings
+int cmp(char *str1, char *str2)
+{
+    int str_len_1 = strlen(str1);
+    int str_len_2 = strlen(str2);
+
+    if(!(str_len_1 == str_len_2) | strncmp(str1, str2, str_len_1)) {
+        return 0; 
+    }
+
+    return 1;
+}
+
 // password checker
 // not safe, stuff is in plain text
 // should benefit from using hashes
 int pass_auth(char *pass, char *input) 
 {
-    if(strncmp(pass, input, strlen(input))) {
-        printf("\nAuthentication failed\n\n");
-        return 0; 
+    if(cmp(pass, input)) {
+        printf("\nAuthentication successful\n");
+        return 1; 
     }
         
-    printf("\nAuthentication successful\n");
-    return 1;
+    printf("\nAuthentication failed\n\n");
+    return 0;
 }
 
 // password searcher
-char * pass_find(char *data, char *input) {
-    char * user_data;
+char * pass_find(char *data, char *input, char *user_data) {
     FILE *users = fopen("users.txt", "r");
+    int got = 0;
 
     // search for user then password
     while(fgets(data, B_SIZE, users)) {
         user_data = strtok(data, ";"); // get the username
-        if(!strncmp(user_data, input, strlen(input))) {
+        if(cmp(data, input)) {
             user_data = strtok(NULL, ";"); // get the password
+            user_data[strlen(user_data) - 1] = '\0';
+            got = 1;
             break;
         }
+    }
+
+    if(!got) {
+        printf("Please check the casing for your username.\n");
+        user_data[0] = '\0';
     }
 
     fclose(users);
@@ -71,7 +91,10 @@ char *log_in(char *data, char *input)
     if(user_exists(username)) {
 
         // get password
-        user_data = pass_find(data, username);
+        user_data = pass_find(data, username, user_data);
+
+        if(user_data[0] == '\0')
+            return 0;
 
         printf("Please enter a password: ");
         readin(input, B_SIZE);
@@ -143,6 +166,7 @@ int main()
     // make a users file if there are none
     // users file will contain all users
     int users = open("users.txt", O_CREAT, 0644);
+    close(users);
 
     username = log_in(data, input);
 
