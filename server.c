@@ -13,8 +13,17 @@
 #include <sys/types.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 #define BUF_SIZE 256
+
+static void sighandler(int signo) {
+    if (signo == SIGINT) {
+        unlink("./wkp");
+        unlink("*_*");
+        exit(0);
+    }
+}
 
 void check_error(int status)
 {
@@ -24,20 +33,16 @@ void check_error(int status)
     }
 }
 
-
-
-int setup_new_handshake()
-{
+void setup_new_client(int * id, key_t * key) {
     printf("Awaiting Client Connection...\n");
     // wkp stands for the server's well known pipe
     int client_pid;
-    mkfifo("wkp", 0666);
+    mkfifo("wkp", 0664);
     int fd;
     fd = open("wkp", O_RDONLY);
     char secret_path[BUF_SIZE];
     int status;
     status = read(fd, secret_path, BUF_SIZE);
-    printf("my pid is %d\n", getpid());
     int secret_pipe = open(secret_path, O_WRONLY);
     remove("wkp");
     check_error(status);
@@ -53,9 +58,27 @@ int setup_new_handshake()
     status = read(fd, final_confirmation, BUF_SIZE);
     check_error(status);
     printf("Handshake established! Received final confirmation message: %s\n\n", final_confirmation);
+
+    // Create unique shared memory for client
+    time_t *data;
+
+    // ftok takes a file path and a id and creates an unique key to use with shmget
+    *key = ftok(secret_path, atoi(secret_path));
+    int shmd;
+    shmd = shmget(*key, 0, 0);
+    if (shmd == -1) {
+        shmd = shmget(*key, BUF_SIZE, IPC_CREAT | 0660);
+    }
+    // Give the client the key
+    status = write(secret_pipe, key, sizeof(key_t));
+    check_error(status);
+    data = shmat(shmd, 0, 0);
+    // initiate a last_modified time 
+    *data = time(NULL);
+    printf("last_modified: %ld\n", *data);
+    shmdt(data);
     close(fd);
-    close(secret_pipe);
-    return (atoi(secret_path));
+    *id = atoi(secret_path);
 }
 
 void read_message(char *client_pid)
@@ -72,127 +95,87 @@ void read_message(char *client_pid)
     printf("%s\n", buffer);
 }
 
-int main()
-{
-
-    // num_clients: the number of clients that will be talking in this given chat session.
-    // for now, num_clients=2. When we work on group chat function, there will be additional logic to sort that out.
-    int num_clients = 2;
-    int client_pids[num_clients];
-    // for each client, fork a handshake process
-    int i;
-    int id;
-    for (i = 0; i < num_clients; i++)
-    {
-        int fds[2];
-        pipe(fds);
-        id = fork();
-        check_error(id);
-
-        if (!id)
-        { // refers to child fork
-
-            int client_pid;
-            client_pid = setup_new_handshake();
-            close(fds[0]);
-            write(fds[1], &client_pid, sizeof(int));
-            exit(0); // after child is done communicating with client, it dies
-        }
-        else
-        { // refers to parent fork
-            int status;
-            wait(&status); // parent waits for child to finish handshake
-            close(fds[1]);
-            read(fds[0], &(client_pids[i]), sizeof(int)); // gets client_pid info from child using unnamed pipes
+int fix_array(int * arr, int max_clients) {
+    int i = 0;
+    int curr = 0;
+    for (i = 0; i < max_clients; i++) {
+        if (arr[i] != 0) {
+            arr[curr] = arr[i];
+            curr++;
         }
     }
-    int pair_of_clients;
-    pair_of_clients = (num_clients) * (num_clients - 1) / 2; // equivalent to n choose 2. determines number of shared mem segments needed for group chat. 
-    int shared_mems[pair_of_clients];
-    int k = 0;
-    for (i = 0; i < num_clients; i++)
-    {
-        int j;
-        char fifo[BUF_SIZE];
-        sprintf(fifo, "%d", client_pids[i]);
-        int fd;
-        fd = open(fifo, O_WRONLY);
-        printf("writing...\n");
-        write(fd, &num_clients, sizeof(int)); // tell each client the number of participants in the chat. 
-        write(fd, client_pids, num_clients * sizeof(int)); // give each client the list of participants
+    for (curr; curr < max_clients; curr++) {
+        arr[curr] = 0;
+    }
+}
 
-        for (j = i + 1; j < num_clients; j++)
-        {
-            // in this loop, the server makes two unique pipes for each client-client pair
-            char p1[BUF_SIZE * 2];
-            char p2[BUF_SIZE * 2];
-            sprintf(p1, "%d_%d", client_pids[i], client_pids[j]);
-            sprintf(p2, "%d_%d", client_pids[j], client_pids[i]);
-            mkfifo(p1, 0666);
-            mkfifo(p2, 0666);
-        }
+void print_array(int * arr, int max_clients) {
+    for (int i = 0; i < max_clients; i++) {
+        printf("\t%d: %d", i, arr[i]);
+    }
+}
 
-        for (j = 0; j < num_clients; j++)
-        {
-
-            if (j == i)
-            {
-                // a client-client pair involving only 1 client (duplicated) shouldn't be allowed
-                continue;
-            }
-
-            char p1[BUF_SIZE * 2];
-            char p2[BUF_SIZE * 2];
-            sprintf(p1, "%d_%d", client_pids[i], client_pids[j]);
-            sprintf(p2, "%d_%d", client_pids[j], client_pids[i]);
-            char *path_for_key;
-            // prime_1 and prime_2 multiply to create a unique id for the ftok() algorithm
-
-            int prime_1;
-            int prime_2;
-            if (j > i)
-            {
-                prime_1 = (int)(pow(2, i));
-                prime_2 = (int)(pow(3, j));
-                path_for_key = p1;
-            }
-            else
-            {
-                prime_1 = (int)(pow(2, j));
-                prime_2 = (int)(pow(3, i));
-                path_for_key = p2;
-            }
-            key_t key;
+int main() {
+    signal(SIGINT, sighandler);
+    int max_clients = 10;
+    int * client_pids = malloc(max_clients * sizeof(int));
+    key_t  * shared_mems = malloc(max_clients * sizeof(key_t));
+    // for each client, fork a handshake process
+    int i = 0;
+    while (i < max_clients) {
+        setup_new_client(&client_pids[i], &shared_mems[i]);
+        char curr_fifo[BUF_SIZE];
+        sprintf(curr_fifo, "%d", client_pids[i]);
+        int curr_fd = open(curr_fifo, O_WRONLY);
+        int k = 0;
+        for (k = 0; k < i; k++) {
             time_t *data;
             int shmd;
-            // ftok takes a file path and a id and creates an unique key to use with shmget
-            key = ftok(path_for_key, prime_1 * prime_2);
-            shmd = shmget(key, 0, 0);
-            if (shmd == -1)
-            {
-                shmd = shmget(key, BUF_SIZE, IPC_CREAT | 0660);
-                shared_mems[k] = shmd;
-                k += 1;
-
-            }
-            // Give the client the key
-            write(fd, &key, sizeof(key_t));
+            shmd = shmget(shared_mems[k], 0, 0);
             data = shmat(shmd, 0, 0);
-            // initiate a last_modified time 
-            *data = time(NULL);
-            printf("last_modified: %ld\n", *data);
+            if (*data == 0) {
+                client_pids[k] = 0;
+                int shmd;
+                shmd = shmget(shared_mems[k], 0, 0);
+                shmctl(shmd, IPC_RMID, 0);
+                shared_mems[k] = 0;
+                int reset = fix_array(client_pids, 10);
+                reset = fix_array(shared_mems, 10);
+                print_array(client_pids, 10);
+                i -= 1;
+                k = -1;
+                continue;
+            }
             shmdt(data);
         }
-    }
-
-
-        // because there's no main.c connecting to the group chat functionality, this server will keep the chat going for 60 secondds
-        // TODO: find a way to not use sleep and instead remove all shared_mem segments upon termination of program. 
-        sleep(60);
-        for (i = 0; i < pair_of_clients; i++)
+        for (k = 0; k < i; k++)
         {
-            printf("shared_memory: %d ", shared_mems[i]);
-            shmctl(shared_mems[i], IPC_RMID, 0);
+            char fifo[BUF_SIZE];
+            sprintf(fifo, "%d", client_pids[k]);
+            int fd;
+            fd = open(fifo, O_WRONLY);
+            printf("writing current client to client %d...\n", client_pids[k]);
+            int status;
+            printf("curr_client: %d %d\n", client_pids[k], shared_mems[k]);
+            printf("new_client: %d %d\n", client_pids[i], shared_mems[i]);
+
+            status = write(fd, &client_pids[i], sizeof(int)); // tell each client the new client 
+            check_error(status);
+            status = write(fd, &shared_mems[i], sizeof(key_t));
+            check_error(status);
+            status = write(curr_fd, &client_pids[k], sizeof(int));
+            check_error(status);
+            status = write(curr_fd, &shared_mems[k], sizeof(key_t));
+            check_error(status);
+            // the server makes two unique pipes for each client-client pair
+            char p1[BUF_SIZE * 2];
+            char p2[BUF_SIZE * 2];
+            sprintf(p1, "%d_%d", client_pids[i], client_pids[k]);
+            sprintf(p2, "%d_%d", client_pids[k], client_pids[i]);
+            mkfifo(p1, 0664);
+            mkfifo(p2, 0664);
         }
-        printf("\n");
+
+        i++;
     }
+}
