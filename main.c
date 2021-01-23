@@ -9,98 +9,151 @@
 #include <sys/stat.h> 
 #include <sys/types.h>
 
+#include "main.h"
+#include "friends.c"
+
 #define B_SIZE 100
 
 // read user input from stdin
-void readin(char * buffer, int len) 
+void readin(char *buffer, int len) 
 {
     fgets(buffer, len, stdin);
     if(strchr(buffer, '\n'))
         *strchr(buffer, '\n') = 0;
 }
 
-// Password checker
-int pass_auth(char * pass, char * input, int pass_size) 
+// password checker
+// not safe, stuff is in plain text
+// should benefit from using hashes
+int pass_auth(char *pass, char *input) 
 {
-    if(!strncmp(pass, input, strlen(input))) {
-        printf("Authentication successful\n");
-    } else {
-        printf("Authentication failed\n");
-        return 0;
+    if(strncmp(pass, input, strlen(input))) {
+        printf("\nAuthentication failed\n\n");
+        return 0; 
     }
-
+        
+    printf("\nAuthentication successful\n");
     return 1;
 }
 
-int main() 
-{
-    char input_data[B_SIZE];
-    char data[B_SIZE];
-    char account[B_SIZE];
-
+// password searcher
+char * pass_find(char *data, char *input) {
     char * user_data;
+    FILE *users = fopen("users.txt", "r");
 
-    FILE *users;
-
-    // Make a users file if there are none
-    if(access("users.txt", F_OK)) {
-        users = fopen("users.txt", "w");
-        fclose(users);
-    }
-
-    users = fopen("users.txt", "r");
-
-    // Input username
-    printf("Please enter a username: ");
-    readin(input_data, B_SIZE);
-
-    int got = 0;
+    // search for user then password
     while(fgets(data, B_SIZE, users)) {
         user_data = strtok(data, ";"); // get the username
-        if(!strncmp(user_data, input_data, strlen(input_data))) {
+        if(!strncmp(user_data, input, strlen(input))) {
             user_data = strtok(NULL, ";"); // get the password
-            got = 1;
             break;
         }
     }
 
-    // Display for new users
-    if(!got) {
-        strncpy(account, input_data, B_SIZE);
-        printf("\nLooks like you are a new user. If so, please type a new password below.\nOtherwise exit the program\n\n");
-    }
+    fclose(users);
+    return user_data;
+}
 
-    // Input password
-    printf("Please enter a password: ");
-    readin(input_data, B_SIZE);
-    int pass_size = strlen(input_data);
+char *log_in(char *data, char *input) 
+{
+    char account[B_SIZE];
+    char *user_data;
+    char *username;
 
-    if(got) {
-        
-        // Check password
-        int auth = pass_auth(user_data, input_data, pass_size);
-        if(!auth) {
-            fclose(users);
+    // input username
+    printf("Please enter a username: ");
+    readin(input, B_SIZE);
+
+    // set username to the given username
+    strcpy(username, input);
+
+    // check if the user exists
+    if(user_exists(username)) {
+
+        // get password
+        user_data = pass_find(data, username);
+
+        printf("Please enter a password: ");
+        readin(input, B_SIZE);
+
+        // authenticate password
+        if(!pass_auth(user_data, input))
             return 0;
-        }
 
     } else {
-
-        // Add new user to the users list
-        users = fopen ("users.txt", "a");
+        strncpy(account, input, B_SIZE);
+        printf("\nLooks like you are a new user. If so, please type a new password below.\nOtherwise exit the program\n\n");
+        readin(input, B_SIZE);
+        
+        FILE *users = fopen("users.txt", "a");
 
         strcat(account, ";");
-
-        // Completely not safe, storing password in plan text
-        strncat(account, input_data, B_SIZE);
+        strncat(account, input, B_SIZE);
         strcat(account, "\n");
 
         fputs(account, users);
+
+        // make user file
+        int cur_user = open(username, O_CREAT | O_WRONLY, 0644);
+        close(cur_user);
+
+        fclose(users);
     }
 
-    fclose(users);
+    // if things succeeded return the username
+    return username;
+}
 
-    // Client stuff ...
+void handle_friends(char *username, char *input)
+{
+    printf("What would you like to do?\n");
+    printf("1 List your current friends\n2 Add a friend\n3 Remove a friend\n4 Talk to a friend\n\n");
+
+    readin(input, B_SIZE);
+    switch(input[0]) {
+        case '1' :
+            list_friends(username);
+            break;
+        case '2' :
+            printf("Who would you like to add? ");
+            readin(input, B_SIZE);
+            add_friend(username, input);
+            break;
+        case '3' :
+            printf("Who would you like to delete? ");
+            readin(input, B_SIZE);
+            remove_friend(username, input);
+            break;
+        case '4' :
+            // will be implemented with working client/server
+            break;
+        default :
+            printf("Please select a valid action\n");
+    }
+}
+
+// If you are a new user, 
+// add semicolons to your username at your own risk
+int main() 
+{
+    char input[B_SIZE]; // store user inputs
+    char data[B_SIZE];  // store other data
+    char *username;     // stor current user
+
+    // make a users file if there are none
+    // users file will contain all users
+    int users = open("users.txt", O_CREAT, 0644);
+
+    username = log_in(data, input);
+
+    if(!username)
+        return 0;
+
+    printf("\nWelcome %s!\n\n", username);
+
+    while(1) {
+        handle_friends(username, input);
+    }
 
     return 0;
 }
