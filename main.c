@@ -89,7 +89,6 @@ void log_in(char *data, char *input, char *username)
     // input username
     printf("Please enter a username: ");
     readin(input, B_SIZE);
-    printf("input: %s\n", input);
     // set username to the given username
     strcpy(username, input);
 
@@ -146,24 +145,31 @@ char ** parse_input(char * input) {
         i++;
     }
     i = 0;
-    char ** names = malloc(B_SIZE);
+    char ** names = malloc(size * sizeof(char *));
     while ((token = strsep(&input, ",")) != NULL) {
-        names[i] = token;
+        char * tok = malloc(B_SIZE);
+        strncpy(tok, token, strlen(token));
+        names[i] = tok;
         i++;
     }
-    printf("size: %d\n", size);
     return names;
 }
 
-void talk_to_friends(char *input)
+void talk_to_friends(char *username, char *input)
 {
-    printf("input: %s\n", input);
     char ** names = parse_input(input);
     int i = 0;
-    while (names[i] != NULL) {
-        printf("names[%d]: %s\n", i, names[i]); 
+    while (names[i]) {
+        check_friends(names[i], username);
+
+        // if friend is on their list, do something
+
+        free(names[i]);
         i++;
     }
+
+    free(names);
+    printf("\n");
     return;
 }
 
@@ -189,9 +195,9 @@ void handle_friends(char *username, char *input)
         remove_friend(username, input);
         break;
     case '4':
-        printf("Who would you like to talk to? Please separate each friend's name with a comma! ");
+        printf("Who would you like to talk to? Please separate each friend's name with a comma and no spaces! ");
         readin(input, B_SIZE);
-        talk_to_friends(input);
+        talk_to_friends(username, input);
         // will be implemented with working client/server
         break;
     default:

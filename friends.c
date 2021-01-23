@@ -42,6 +42,35 @@ char **get_friends(char *user) {
     return friend_array;
 }
 
+// Check if a user is in a friend list
+int check_friends(char *friend, char *user) {
+    if (!user_exists(friend)) {
+        printf("%s is not a user\n", friend);
+        return 0;
+    }
+
+    char **friends = get_friends(friend);
+    int i;
+    int got = 0;
+    for(i = 0; friends[i]; i++) {
+        if(cmp(user, friends[i])) {
+            got = 1;
+            printf("You are on %s's friendlist!\n", friend);
+            free(friends[i]);
+            break;
+        }
+        free(friends[i]);
+    }
+
+    free(friends);
+
+    if(got)
+        return 1;
+    
+    printf("You are not on %s's friendlist\n", friend);
+    return 0;
+}
+
 // Lists all friends
 void list_friends(char *user) {
     char **friends = get_friends(user);
