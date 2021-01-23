@@ -110,34 +110,28 @@ int main()
         // read all clients in
         status = read_client(secret_pipe, &all_clients[i], &shared_mems[i]);
         while (status == 0) {
-            i++;
-            status = read_client(secret_pipe, &all_clients[i], &shared_mems[i]);
-        }
-
-        fcntl(secret_pipe, F_SETFL, O_RDONLY);
-        int j;
-        time_t last_modified = time(NULL);
-        // store the last_modified times from all relevant shared_mem segments for later comparison when reading from other clients
-        time_t *data;
-        for (j = 0; all_clients[j] != 0; j++) {
-            //printf("%d ", shared_mems[j]);
+            time_t last_modified = time(NULL);
+            time_t *data;
             int shmd;
-            shmd = shmget(shared_mems[j], 0, 0);
+            shmd = shmget(shared_mems[i], 0, 0);
+            check_error(shmd);
             data = shmat(shmd, 0, 0);
-            //printf("%ld\n", *data);
             last_modified = *data;
             last_modified_times[i] = last_modified;
             shmdt(data);
+            i++;
+            status = read_client(secret_pipe, &all_clients[i], &shared_mems[i]);
         }
+        // store the last_modified times from all relevant shared_mem segments for later comparison when reading from other clients
         int p;
         int *sending_message;
         sending_message = shmat(pipe_shmd, 0, 0);
-        //printf("pipe_shmd: %d\n", pipe_shmd);
         key_t key;
         if (*sending_message == 0)
         {
             p = fork();
         }
+        shmdt(sending_message);
 
         if (!p)
         {
@@ -152,11 +146,8 @@ int main()
             for (z = 1; z < i; z++)
             {
                 int client_id = all_clients[z];
-                char *path_for_key;
-                char p1[BUF_SIZE * 2];
                 char p2[BUF_SIZE * 2];
                 time_t *last_modified;
-                sprintf(p1, "%d_%d", getppid(), client_id);
                 sprintf(p2, "%d_%d", client_id, getppid());
                 // write message to all other clients
                 int fd;
@@ -183,11 +174,10 @@ int main()
             {
                 int other_client_pid = all_clients[h];
                 char p1[BUF_SIZE * 2];
-                char p2[BUF_SIZE * 2];
                 key_t key;
                 sprintf(p1, "%d_%d", client_pid, other_client_pid);
-                sprintf(p2, "%d_%d", other_client_pid, client_pid);
                 int shmd;
+                int *data;
                 shmd = shmget(shared_mems[h], 0, 0);
                 data = shmat(shmd, 0, 0);
                 time_t shmd_last_modified;
@@ -215,6 +205,5 @@ int main()
                 }
             }
         }
-        sleep(0.1);
     }
 }
