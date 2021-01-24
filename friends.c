@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "main.h"
+#include "util.h"
 
 // Check to see if a file exists with name of the user
 int user_exists(char *filename) {

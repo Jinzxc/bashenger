@@ -33,18 +33,18 @@ void check_error(int status)
     }
 }
 
-void setup_new_client(int * id, key_t * key) {
+void setup_new_client(int * id, key_t * key, char * user_room) {
     printf("Awaiting Client Connection...\n");
     // wkp stands for the server's well known pipe
     int client_pid;
-    mkfifo("wkp", 0664);
+    mkfifo(user_room, 0664);
     int fd;
-    fd = open("wkp", O_RDONLY);
+    fd = open(user_room, O_RDONLY);
     char secret_path[BUF_SIZE];
     int status;
     status = read(fd, secret_path, BUF_SIZE);
     int secret_pipe = open(secret_path, O_WRONLY);
-    remove("wkp");
+    remove(user_room);
     check_error(status);
     // Client sends to server first
     printf("Handshake Commencing with client (Path=%s)\n\n", secret_path);
@@ -115,15 +115,14 @@ void print_array(int * arr, int max_clients) {
     }
 }
 
-int main() {
+int server(int max_clients, char *user_room) {
     signal(SIGINT, sighandler);
-    int max_clients = 10;
     int * client_pids = malloc(max_clients * sizeof(int));
     key_t  * shared_mems = malloc(max_clients * sizeof(key_t));
     // for each client, fork a handshake process
     int i = 0;
     while (i < max_clients) {
-        setup_new_client(&client_pids[i], &shared_mems[i]);
+        setup_new_client(&client_pids[i], &shared_mems[i], user_room);
         char curr_fifo[BUF_SIZE];
         sprintf(curr_fifo, "%d", client_pids[i]);
         int curr_fd = open(curr_fifo, O_WRONLY);
