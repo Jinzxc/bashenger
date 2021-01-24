@@ -109,11 +109,6 @@ void clean_up_client()
         time_t *data;
 
         data = shmat(shmd, 0, 0);
-        printf("data: %ld\n", *data);
-        if (last_modified_times[0] == *data) {
-            printf("TIME HASN'T CHANGED\n");
-        }
-        printf("Setting data to 0\n");
         *data = 0;
         shmdt(data);
         // printf("j: %d", j);
@@ -324,7 +319,6 @@ int main()
                 {
                     fd = client_fds[z * 2 - 2];
                 }
-                printf("fd: %d\n", fd);
                 status = write(fd, buffer, BUF_SIZE);
                 check_error(status);
             }
