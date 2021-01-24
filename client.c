@@ -96,7 +96,6 @@ void clean_up_client()
     }
 
     shmd = shmget(key, 0, 0);
-    printf("shmd: %d\n", shmd);
     if (shmd != -1) {
         time_t *data;
         data = shmat(shmd, 0, 0);
@@ -127,7 +126,6 @@ static void sighandler(int signo)
 }
 
 static void sighandler_child(int signo) {
-    printf("this is being called..\n");
     if (signo == SIGINT) {
         kill(getppid(), signo);
     }
@@ -281,6 +279,30 @@ int main()
                 char p2[BUF_SIZE * 2];
                 time_t *last_modified;
                 sprintf(p2, "%d_%d", client_id, getppid());
+                int *data;
+                shmd = shmget(shared_mems[z], 0, 0);
+                data = shmat(shmd, 0, 0);
+                time_t shmd_last_modified;
+                shmd_last_modified = *data;
+                if (*data == 0)
+                {
+                    all_clients[z] = 0;
+                    shared_mems[z] = 0;
+                    last_modified_times[z] = 0;
+                    int f;
+                    for (f = 0; f < 2 * MAX_CLIENTS; f++)
+                    {
+                        client_fds[f] = 0;
+                    }
+                    int update;
+                    fix_array(all_clients, MAX_CLIENTS);
+                    fix_array(shared_mems, MAX_CLIENTS);
+                    fix_time_array(last_modified_times, MAX_CLIENTS);
+                    z = 0;
+                    i -= 1;
+                    continue;
+                }
+                shmdt(data);
                 // write message to all other clients
                 int fd;
                 if (client_fds[z * 2 - 2] == 0)
