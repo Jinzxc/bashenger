@@ -74,4 +74,5 @@ Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 1/15 - Michael - Finished group chat functionality assuming all clients are connected. 
 1/20 - Victor - Start bugfix where you must start with all clients connected.
 1/21 - Victor - Finish logic where new clients handshake and is sent to other clients.
-1/23 - Victor - Finish messaging between clients (some bugs with newly connected clients)
+1/23 - Victor - Finish messaging between clients (some bugs with newly connected clients).
+1/23 - Michael - Freed all malloc'd segments, and fixed bug with shared mem segments not being properly removed.
