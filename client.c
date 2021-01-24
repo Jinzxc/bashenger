@@ -144,6 +144,8 @@ int main()
     all_clients = malloc(MAX_CLIENTS * sizeof(int));
     last_modified_times = malloc(MAX_CLIENTS * sizeof(time_t));
 
+    int client_fds[2 * MAX_CLIENTS] = {0};
+
     signal(SIGINT, sighandler);
 
 
@@ -199,7 +201,6 @@ int main()
             *sending_message = 1; // this effectively makes sure a child process is created only when there's a new fgets call. 
         }
         shmdt(sending_message);
-
         if (!p)
         {
             char buffer[BUF_SIZE];
@@ -212,9 +213,10 @@ int main()
             last_modified = shmat(shmd, 0, 0);
             // set the last_modified time for all relevant shared_mem segments to current time
             *last_modified = time(NULL);
-            printf("last_modified_sending %ld\n", *last_modified);
+            //printf("last_modified_sending %ld\n", *last_modified);
             shmdt(last_modified);
             int z;
+            *sending_message = 0;
             for (z = 1; z < i; z++)
             {
                 int client_id = all_clients[z];
@@ -223,11 +225,15 @@ int main()
                 sprintf(p2, "%d_%d", client_id, getppid());
                 // write message to all other clients
                 int fd;
-                fd = open(p2, O_WRONLY);
+                if (client_fds[z * 2 - 2] == 0) {
+                    fd = open(p2, O_WRONLY);
+                    client_fds[z * 2 - 2] = fd;
+                } else {
+                    fd = client_fds[z * 2 - 2];
+                }
                 status = write(fd, buffer, BUF_SIZE);
                 check_error(status);
             }
-            *sending_message = 0;
             shmdt(sending_message);
             exit(0);
         }
@@ -252,6 +258,10 @@ int main()
                     all_clients[h] = 0;
                     shared_mems[h] = 0;
                     last_modified_times[h] = 0;
+                    int f;
+                    for (f = 0; f < 2 * MAX_CLIENTS; f++) {
+                        client_fds[f] = 0;
+                    }
                     int update;
                     fix_array(all_clients, MAX_CLIENTS);
                     fix_array(shared_mems, MAX_CLIENTS);
@@ -269,7 +279,11 @@ int main()
                     if (!f)
                     {
                         int fd;
-                        fd = open(p1, O_RDONLY);
+                        if (client_fds[h * 2 - 1] == 0) {
+                            fd = open(p1, O_RDONLY);
+                        } else{
+                            fd = client_fds[h * 2 - 1];
+                        }
                         char msg[BUF_SIZE];
                         read(fd, msg, BUF_SIZE);
                         printf("\nmsg: %s\n", msg);
@@ -282,6 +296,5 @@ int main()
                 }
             }
         }
-
     }
 }
