@@ -21,6 +21,7 @@
 key_t *shared_mems;
 int *all_clients;
 time_t *last_modified_times;
+int * malloc_i;
 
 void check_error(int status)
 {
@@ -96,13 +97,6 @@ void clean_up_client()
     }
 
     shmd = shmget(key, 0, 0);
-    if (shmd != -1) {
-        time_t *data;
-        data = shmat(shmd, 0, 0);
-        *data = 0;
-        shmdt(data);
-        shmctl(shmd, IPC_RMID, 0);
-    }
     int j;
     for (j = 0; all_clients[j] != 0; j++)
     {
@@ -111,9 +105,26 @@ void clean_up_client()
         sprintf(buffer, "%d_%d", all_clients[j], getpid());
         remove(buffer);
     }
+    if (shmd != -1) {
+        time_t *data;
+
+        data = shmat(shmd, 0, 0);
+        printf("data: %ld\n", *data);
+        if (last_modified_times[0] == *data) {
+            printf("TIME HASN'T CHANGED\n");
+        }
+        printf("Setting data to 0\n");
+        *data = 0;
+        shmdt(data);
+        // printf("j: %d", j);
+        if (j == 1) {
+            shmctl(shmd, IPC_RMID, 0);
+        }
+    }
     free(all_clients);
     free(shared_mems);
     free(last_modified_times);
+    free(malloc_i);
 }
 
 static void sighandler(int signo)
@@ -202,7 +213,6 @@ int main()
 
     int pipe_shmd;
     pipe_shmd = shmget(24601 + getpid(), sizeof(int), IPC_CREAT | 0660);
-
     int i = 1;
     int status = 0;
     while (i < MAX_CLIENTS)
@@ -262,7 +272,7 @@ int main()
             {
                 kill(getppid(), SIGINT);
             }
-            printf("\nyou wrote: %s", buffer);
+            printf("\nyou wrote: %s\n", buffer);
             int shmd;
             shmd = shmget(shared_mems[0], 0, 0);
             time_t *last_modified;
@@ -300,9 +310,9 @@ int main()
                     fix_time_array(last_modified_times, MAX_CLIENTS);
                     z = 0;
                     i -= 1;
+                    shmdt(data);
                     continue;
                 }
-                shmdt(data);
                 // write message to all other clients
                 int fd;
                 if (client_fds[z * 2 - 2] == 0)
@@ -314,6 +324,7 @@ int main()
                 {
                     fd = client_fds[z * 2 - 2];
                 }
+                printf("fd: %d\n", fd);
                 status = write(fd, buffer, BUF_SIZE);
                 check_error(status);
             }
@@ -334,11 +345,15 @@ int main()
                 int shmd;
                 int *data;
                 shmd = shmget(shared_mems[h], 0, 0);
+                // printf("shmd: %d\n", shmd);
                 data = shmat(shmd, 0, 0);
                 time_t shmd_last_modified;
                 shmd_last_modified = *data;
                 if (*data == 0)
                 {
+                    if (h == i - 1) {
+                        shmctl(shmd, IPC_RMID, 0);
+                    }
                     all_clients[h] = 0;
                     shared_mems[h] = 0;
                     last_modified_times[h] = 0;
