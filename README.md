@@ -68,6 +68,7 @@ Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 
 
 # DEVLOG
+=======
 1/11 [Start of project]
 1/12 - Victor  - Added functions for adding, deleting, and listing friends for a given friend.\
 1/13 - Michael - Implemented handshaking between server and client(s). Implemented client-client FIFOs.\
@@ -79,3 +80,4 @@ Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
 1/22 - Jin     - Optimized account system. Fixed issue and tested friend.c.\
 1/23 - Jin     - Updated main with friend.c implementations. Fixed memory issues with friend.c\
 1/23 - Victor  - Finish messaging between clients (some bugs with newly connected clients)\
+1/23 - Michael - Freed all malloc'd segments, and fixed bug with shared mem segments not being properly removed.\
