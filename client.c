@@ -21,7 +21,6 @@
 key_t *shared_mems;
 int *all_clients;
 time_t *last_modified_times;
-int * malloc_i;
 char server_name[BUF_SIZE];
 
 int fix_time_array(time_t *arr, int max_clients)
@@ -46,22 +45,17 @@ int fix_time_array(time_t *arr, int max_clients)
 
 void clean_up_client()
 {
-     printf("EXITING CHAT RIGHT NOW...\n");
+    printf("EXITING CHAT RIGHT NOW...\n");
     int shmd = shmget(24601 + getpid(), 0, 0);
     // printf("ppid: %d\n", getppid());
     // printf("shmd: %d\n", shmd);
-    char path[BUF_SIZE];
-    sprintf(path, "%d", getpid());
-    key_t key = ftok(path, getpid());
     
     char buffer[BUF_SIZE];
     sprintf(buffer, "%d", getpid());
     remove(buffer);
-    if (shmd != -1) {
-        shmctl(shmd, IPC_RMID, 0);
-    }
+    shmctl(shmd, IPC_RMID, 0);
 
-    shmd = shmget(key, 0, 0);
+    shmd = shmget(shared_mems[0], 0, 0);
     int j;
     for (j = 0; all_clients[j] != 0; j++)
     {
@@ -70,22 +64,19 @@ void clean_up_client()
         sprintf(buffer, "%d_%d", all_clients[j], getpid());
         remove(buffer);
     }
-    if (shmd != -1) {
-        time_t *data;
-
-        data = shmat(shmd, 0, 0);
-        *data = 0;
-        shmdt(data);
-        // printf("j: %d", j);
-        if (j == 1) {
-            shmctl(shmd, IPC_RMID, 0);
-            remove(server_name);
-        }
+    
+    time_t *data;
+    data = shmat(shmd, 0, 0);
+    *data = 0;
+    shmdt(data);
+    // printf("j: %d", j);
+    if (j == 1) {
+        shmctl(shmd, IPC_RMID, 0);
+        remove(server_name);
     }
     free(all_clients);
     free(shared_mems);
     free(last_modified_times);
-    free(malloc_i);
 }
 
 static void sighandler_parent(int signo)
@@ -118,7 +109,6 @@ int send_handshake(char * server)
     int status;
     status = write(wkp, secret_path, BUF_SIZE);
     secret_pipe = open(secret_path, O_RDONLY);
-    printf("secret_pipe: %d\n", secret_pipe);
     // sending initial connection request to server
     check_error(status);
     // receiving acknowledgement from server
@@ -139,12 +129,14 @@ int read_client(int secret_pipe, int *client_pid, key_t *client_mem)
     fcntl(secret_pipe, F_SETFL, flags | O_NONBLOCK);
     int status;
     status = read(secret_pipe, client_pid, sizeof(int));
+    // printf("read client_pid: %d", *client_pid);
     if (*client_pid == 0)
     {
         return -1;
     }
     key_t key;
     status = read(secret_pipe, &key, sizeof(key_t));
+    // printf("read key: %d\n", key);
     *client_mem = key;
     if (*client_mem == 0)
     {
@@ -163,10 +155,8 @@ void client(char * server)
     int client_fds[2 * MAX_CLIENTS] = {0};
 
     signal(SIGINT, sighandler_parent);
-
-    printf("hi there\n");
+    printf("server: %s\n", server);
     int secret_pipe = send_handshake(server);
-    printf("goodbye\n");
 
     int key;
     read(secret_pipe, &key, sizeof(key_t));
@@ -178,9 +168,11 @@ void client(char * server)
     pipe_shmd = shmget(24601 + getpid(), sizeof(int), IPC_CREAT | 0660);
     int i = 1;
     int status = 0;
+    printf("about to run outer while loop...\n");
     while (i < MAX_CLIENTS)
     {
         // read all clients in
+        // printf("about to call read_client()\n");
         status = read_client(secret_pipe, &all_clients[i], &shared_mems[i]);
         while (status == 0)
         {
@@ -188,6 +180,7 @@ void client(char * server)
             time_t *data;
             int shmd;
             shmd = shmget(shared_mems[i], 0, 0);
+
             check_error(shmd);
             data = shmat(shmd, 0, 0);
             last_modified = *data;
@@ -257,6 +250,7 @@ void client(char * server)
                 data = shmat(shmd, 0, 0);
                 time_t shmd_last_modified;
                 shmd_last_modified = *data;
+                printf("data: %d\n", *data);
                 if (*data == 0)
                 {
                     all_clients[z] = 0;
@@ -281,15 +275,17 @@ void client(char * server)
                 if (client_fds[z * 2 - 2] == 0)
                 {
                     fd = open(p2, O_WRONLY);
+                    printf("p2 check error\n");
+                    check_error(fd);
                     client_fds[z * 2 - 2] = fd;
                 }
                 else
                 {
                     fd = client_fds[z * 2 - 2];
                 }
-
-                printf("fdw: %d\n", fd);
+                printf("write:");
                 status = write(fd, buffer, BUF_SIZE);
+                printf("write check error\n");
                 check_error(status);
             }
             shmdt(sending_message);
@@ -346,13 +342,15 @@ void client(char * server)
                         if (client_fds[h * 2 - 1] == 0)
                         {
                             fd = open(p1, O_RDONLY);
+                            printf("p1 check error\n");
+                            check_error(fd);
                         }
                         else
                         {
                             fd = client_fds[h * 2 - 1];
                         }
-                        printf("fdr: %d\n", fd);
                         char msg[BUF_SIZE];
+                        printf("read");
                         read(fd, msg, BUF_SIZE);
                         printf("\nmsg: %s\n", msg);
                         exit(0);

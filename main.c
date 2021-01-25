@@ -153,11 +153,12 @@ char ** get_friend_rooms(char *username)
 
     char **rooms = malloc((i + 1) * sizeof(char *));
     char room_name[BUF_SIZE];
-
+    
     i = 0;
     int j = 0;
     while(friends[i]) {
         strncpy(room_name, friends[i], BUF_SIZE);
+        strncat(room_name, " room", 6);
         if(user_exists(room_name)) {
             char * room = malloc(BUF_SIZE * sizeof(char));
             strncpy(room, room_name, BUF_SIZE);

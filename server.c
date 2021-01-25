@@ -18,13 +18,19 @@
 #include "util.h"
 
 int *clients;
-key_t *keys;
+key_t *shared_mems;
 
 static void sighandler(int signo) {
     if (signo == SIGINT) {
         unlink("*_*");
         free(clients);
-        free(keys);
+        int i;
+        int shmd;
+        for (i = 0; shared_mems[i] != 0; i++) {
+            shmd = shmget(shared_mems[i], 0, 0);
+            shmctl(shmd, IPC_RMID, 0);
+        }
+        free(shared_mems);
         exit(0);
     }
 }
@@ -95,8 +101,7 @@ void server(int max_clients, char *user_room) {
     signal(SIGINT, sighandler);
     int * client_pids = malloc(max_clients * sizeof(int));
     clients = client_pids;
-    key_t  * shared_mems = malloc(max_clients * sizeof(key_t));
-    keys = shared_mems;
+    shared_mems = malloc(max_clients * sizeof(key_t));
     // for each client, fork a handshake process
     int i = 0;
     while (i < max_clients) {
