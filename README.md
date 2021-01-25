@@ -48,5 +48,6 @@ To run the program, run `make` and subsequently `make run`. `make run` must be r
 
 #BUGLIST
 - On Michael's system (Mac OSX), sometimes there are segmentation faults when there are more than 2 clients in a room.
-- On Victor's system (Linux), occasionally available chat rooms are not displayed.
-
+- Messages may not all send (suspect that write is expensive and therefore cannot write everything a client is sending)
+- On Victor's System (Ubuntu), adding more than 4 clients causes a segfault
+- Sometimes, the shared memory bugs out and one of the clients in the room cannot access this. You must rejoin to fix this problem.

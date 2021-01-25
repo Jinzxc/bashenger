@@ -12,3 +12,4 @@
 1/23 - Jin     - Added util file to hold useful functions. Wrote functions in main to create and list chat rooms.
 1/23 - Michael - Freed all malloc'd segments, and fixed bug with shared mem segments not being properly removed.
 1/24 - Jin     - Wrote code for server/client to interact with main. Fixed chat room bugs in main.
+1/25 - Vicotr  - Fixed most of the segfaults involving bugged shared memory.
