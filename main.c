@@ -15,6 +15,8 @@
 #include "server.c"
 #include "client.c"
 
+char user_name[BUF_SIZE];
+
 // password checker
 // not safe, stuff is in plain text
 // should benefit from using hashes
@@ -197,7 +199,7 @@ void select_rooms(char **rooms)
                 selected = 1;
                 free_all(rooms);
                 printf("\n[%s selected]\n", select);
-                client(select);
+                client(select, user_name);
             }
         }
 
@@ -228,7 +230,7 @@ void talk_to_friends(char *username, char *input)
         if(f) {
             sleep(1);
             printf("%s\n", user_room);
-            client(user_room);
+            client(user_room, user_name);
         } else {
             server(MAX_CLIENTS, user_room);
         }
@@ -288,6 +290,8 @@ int main()
 
     if (username[0] == '\0')
         return 0;
+
+    strncpy(user_name, username, BUF_SIZE);
 
     printf("\nWelcome %s!\n\n", username);
 

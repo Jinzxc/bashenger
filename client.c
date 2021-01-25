@@ -67,6 +67,9 @@ void clean_up_client()
         sprintf(buffer, "%d_%d", all_clients[j], getpid());
         remove(buffer);
     }
+
+    if(j == 1)
+        remove(server_name);
     
     free(all_clients);
     free(shared_mems);
@@ -138,7 +141,7 @@ int read_client(int secret_pipe, int *client_pid, key_t *client_mem)
     return 0;
 }
 
-void client(char * server)
+void client(char * server, char * user_name)
 {
     strncpy(server_name, server, BUF_SIZE);
     shared_mems = malloc(MAX_CLIENTS * sizeof(key_t));
@@ -198,15 +201,19 @@ void client(char * server)
         if (!p)
         {
             signal(SIGINT, sighandler_child);
+            char msg[BUF_SIZE];
             char buffer[BUF_SIZE];
+            strncpy(buffer, user_name, BUF_SIZE);
             int *sending_message = shmat(pipe_shmd, 0, 0);
-            fgets(buffer, BUF_SIZE, stdin);
-            if (strchr(buffer, '\n'))
+            fgets(msg, BUF_SIZE, stdin);
+            if (strchr(msg, '\n'))
             {
-                *strchr(buffer, '\n') = '\0';
+                *strchr(msg, '\n') = '\0';
             }
+            strncat(buffer, ": ", BUF_SIZE);
+            strncat(buffer, msg, BUF_SIZE);
 
-            if (strcmp(buffer, "exit()") == 0)
+            if (strcmp(msg, "exit()") == 0)
             {
                 kill(getppid(), SIGINT);
             }
@@ -329,7 +336,7 @@ void client(char * server)
                         }
                         char msg[BUF_SIZE];
                         read(fd, msg, BUF_SIZE);
-                        printf("\n%d: %s\n", all_clients[h], msg);
+                        printf("\nClient %d, %s\n", all_clients[h], msg);
                         exit(0);
                     }
                     else
