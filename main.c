@@ -146,22 +146,26 @@ char ** parse_input(char * input) {
 char ** get_friend_rooms(char *username)
 {
     char **friends = get_friends(username);
-    char **rooms = malloc(sizeof(friends));
-    char room_name[BUF_SIZE];
 
     int i = 0;
+    while(friends[i])
+        i++;
+
+    char **rooms = malloc((i + 1) * sizeof(char *));
+    char room_name[BUF_SIZE];
+
+    i = 0;
     int j = 0;
     while(friends[i]) {
         strncpy(room_name, friends[i], BUF_SIZE);
-        strncat(room_name, " room", 5);
         if(user_exists(room_name)) {
             char * room = malloc(BUF_SIZE * sizeof(char));
             strncpy(room, room_name, BUF_SIZE);
             rooms[j] = room;
             j++;
         }
-        i++;
         free(friends[i]);
+        i++;
     }
 
     free(friends);
@@ -173,7 +177,7 @@ void select_rooms(char **rooms)
     int i = 0;
     int selected = 0;
     char select[BUF_SIZE];
-    printf("\nHere are the available from your friends:\n");
+    printf("\nHere are the available rooms from your friends:\n");
     while(rooms[i]) {
         printf("%s\n", rooms[i]);
         i++;
