@@ -4,6 +4,26 @@
 ## High-Level Description
 In this project, we are imitating Messenger and making it more systemy.
 
+## How to Run Program
+To run the program, run `make` and simply run `make run`. This must be done for every user (i.e. different terminal windows) if they wish to join in.
+
+## Required Libraries: 
+    - stdlib.h
+    - stdio.h
+    - string.h
+    - fcntl.h
+    - unistd.h
+    - ctype.h
+    - signal.h
+    - sys/stat.h
+    - sys/types.h
+    - sys/ipc.h
+    - sys/shm.h
+    - sys/stat.h
+    - sys/wait.h
+    - time.h
+    - errno.h
+
 ## Basic Walkthrough
 0.  Prompts user to type a username.
     - If username is not found then prompts users to sign up.
@@ -15,56 +35,19 @@ In this project, we are imitating Messenger and making it more systemy.
         - List friends.
         - Message a friend.
         - Remove a friend.
-    2. User chooses to run one.
-    3. Adding, listing, and removing a friend is one step\
-    Messaging is continuous until [exit].
-    
-2. Return to step 1
+2. User chooses to run one.
+3. Adding, listing, and removing a friend is one step\
+    - If user wishes to add, then he or she will be prompted to add the username of the person. This person must have already registered.
+    - If user wishes to remove, then it's the same procedure as adding. 
+4. Talking to a Friend
+    - The user will be prompted to either start a new chatroom, or join an existing friend's room. (Note: as long as an user added a given room owner as a friend, he/she can join that owner's room)
+    - When user starts a new chatroom, he or she waits for other clients to join before they start typing. User can exit the chatroom by either clicking ctrl-c or by typing "exit()" in the chat. 
+    - If user exits, the user will have to run `./main` again in order to move on to other chatrooms or create one. 
+    - Return to step 1.
 
-## Program Usage
-- Like Messenger, there will be a list of people a user can talk to. 
-- Users will be able to send to and receive messages from other users. 
-- Users can look up available users.
-- Users can add "friends" to talk to.
-- Users can remove "friends." [extra]
-
-## Technical design
-### Topic Implementations
-- Use pipes to transfer messages between users.
-- Track past messages and users by writing them into files.
-- Finding information about files (check time stamps).
-- Use forking and processes for interacting with cilents.
-
-### Delegations
-Victor:  Making friend list (adding, searching, deleting). \
-Michael: Sending and receiving messages. \
-Jin:     Designing chat window, message history/metadata. 
-
-### Data Structure
-Array: buffer for data (friend names & stuff).\
-Queue: buffer for the messages.\
-Tree (pre-fix):  compressing messages [extra].\
-Structs: File manipulation and tree.
-
-### Algorithms
-Message Compression Algorithm [extra]. \
-Message Decompression Algorithm [extra].
-
-## Timeline
-1. Give a name, get a friend (pre-adding friend)  [1/11 - 1/14]
-2. Implement friend list (adding/removing)        [1/11 - 1/14]
-3. Implement basic chatting                       [1/14 - 1/16]
-4. Group chat                                     [1/16 - 1/18]
-5. Bug fixing/implement extra features            [1/18 - 1/25]
-
-Will be expected to be completed in 14 years 2 months 3 days at 3:35 PM EST
-
-## Extra Stuff (to add?)
-- Talking with mutliple people at once.
-- Friend requests (accept/deny).
-- Block users from messaging (refuse messages).
-- Extra encryption/decryption.
-- Notifications.
+#BUGLIST
+- On Michael's system (Mac OSX), sometimes there are segmentation faults when there are more than 2 clients in a room.
+- On Victor's system (Linux), occasionally available chat rooms are not displayed.
 
 
 # DEVLOG
