@@ -97,7 +97,7 @@ int add_friend(char *user, char *friend) {
     if (!user_exists(user)) {
         return -1;
     } else if(!user_exists(friend)) {
-        printf("User to be addded does not exists\n\n");
+        printf("User to be added does not exist\n\n");
         return -1;
     }
     int friend_list = open(user, O_WRONLY | O_APPEND);
@@ -125,7 +125,7 @@ int remove_friend(char *user, char *friend) {
     if (!user_exists(user)) {
         return -1;
     } else if(!user_exists(friend)) {
-        printf("User to be removed does not exists\n\n");
+        printf("User to be removed does not exist\n\n");
         return -1;
     }
     char ** friends = get_friends(user);

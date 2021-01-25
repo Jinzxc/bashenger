@@ -17,13 +17,13 @@
 
 #include "util.h"
 
-int *clients;
+int *client_pids;
 key_t *shared_mems;
 
 static void sighandler(int signo) {
     if (signo == SIGINT) {
         unlink("*_*");
-        free(clients);
+        free(client_pids);
         int i;
         int shmd;
         for (i = 0; shared_mems[i] != 0; i++) {
@@ -36,7 +36,7 @@ static void sighandler(int signo) {
 }
 
 void setup_new_client(int * id, key_t * key, char * user_room) {
-    printf("Awaiting Client Connection...\n");
+    //printf("Awaiting Client Connection...\n");
     // wkp stands for the server's well known pipe
     int client_pid;
     mkfifo(user_room, 0664);
@@ -49,9 +49,9 @@ void setup_new_client(int * id, key_t * key, char * user_room) {
     remove(user_room);
     check_error(status);
     // Client sends to server first
-    printf("Handshake Commencing with client (Path=%s)\n\n", secret_path);
+    //printf("Handshake Commencing with client (Path=%s)\n\n", secret_path);
     // Server verifies that client can send
-    printf("Sending acknowledgement message to client\n\n");
+    //printf("Sending acknowledgement message to client\n\n");
     char message[] = "You've been acknowledged by server";
     status = write(secret_pipe, message, sizeof(message));
     check_error(status);
@@ -59,7 +59,7 @@ void setup_new_client(int * id, key_t * key, char * user_room) {
     // Server verifies that client recieved acknowledgement
     status = read(fd, final_confirmation, BUF_SIZE);
     check_error(status);
-    printf("Handshake established! Received final confirmation message: %s\n\n", final_confirmation);
+    //printf("Handshake established! Received final confirmation message: %s\n\n", final_confirmation);
 
     // Create unique shared memory for client
     time_t *data;
@@ -82,23 +82,9 @@ void setup_new_client(int * id, key_t * key, char * user_room) {
     *id = atoi(secret_path);
 }
 
-void read_message(char *client_pid)
-{
-    // makes fifo whose name=client's pid
-    mkfifo(client_pid, 0666);
-    char buffer[BUF_SIZE];
-    int client = open(client_pid, O_RDONLY);
-    read(client, buffer, BUF_SIZE);
-    if (strcmp(buffer, "stop") == 0)
-    {
-        return;
-    }
-}
-
 void server(int max_clients, char *user_room) {
     signal(SIGINT, sighandler);
-    int * client_pids = malloc(max_clients * sizeof(int));
-    clients = client_pids;
+    client_pids = malloc(max_clients * sizeof(int));
     shared_mems = malloc(max_clients * sizeof(key_t));
     // for each client, fork a handshake process
     int i = 0;
@@ -111,9 +97,14 @@ void server(int max_clients, char *user_room) {
         for (k = 0; k < i; k++) {
             time_t *data;
             int shmd;
+            int checker = 1;
             shmd = shmget(shared_mems[k], 0, 0);
-            data = shmat(shmd, 0, 0);
-            if (*data == 0) {
+            if (shmd != -1) {
+                data = shmat(shmd, 0, 0);
+            } else {
+                checker = 0;
+            }
+            if (checker == 0 || *data == 0) {
                 client_pids[k] = 0;
                 int shmd;
                 shmd = shmget(shared_mems[k], 0, 0);
@@ -135,6 +126,13 @@ void server(int max_clients, char *user_room) {
             int fd;
             fd = open(fifo, O_WRONLY);
             int status;
+            
+            char p1[BUF_SIZE * 2];
+            char p2[BUF_SIZE * 2];
+            sprintf(p1, "%d_%d", client_pids[i], client_pids[k]);
+            sprintf(p2, "%d_%d", client_pids[k], client_pids[i]);
+            mkfifo(p1, 0664);
+            mkfifo(p2, 0664);
 
             status = write(fd, &client_pids[i], sizeof(int)); // tell each client the new client 
             check_error(status);
@@ -145,12 +143,6 @@ void server(int max_clients, char *user_room) {
             status = write(curr_fd, &shared_mems[k], sizeof(key_t));
             check_error(status);
             // the server makes two unique pipes for each client-client pair
-            char p1[BUF_SIZE * 2];
-            char p2[BUF_SIZE * 2];
-            sprintf(p1, "%d_%d", client_pids[i], client_pids[k]);
-            sprintf(p2, "%d_%d", client_pids[k], client_pids[i]);
-            mkfifo(p1, 0664);
-            mkfifo(p2, 0664);
         }
 
         i++;

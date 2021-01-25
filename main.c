@@ -218,7 +218,7 @@ void talk_to_friends(char *username, char *input)
 
     char user_room[BUF_SIZE];
     strncpy(user_room, username, BUF_SIZE);
-    strncat(user_room, " room", 5);
+    strncat(user_room, " room", 6);
 
     switch (input[0])
     {

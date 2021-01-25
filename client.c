@@ -45,14 +45,20 @@ int fix_time_array(time_t *arr, int max_clients)
 
 void clean_up_client()
 {
-    printf("EXITING CHAT RIGHT NOW...\n");
-    int shmd = shmget(24601 + getpid(), 0, 0);
+    int shmd;
+    shmd = shmget(shared_mems[0], 0, 0);
+    time_t *data;
+    data = shmat(shmd, 0, 0);
+    *data = 0;
+    shmdt(data);
+   
+    int shmd2;
+    shmd2 = shmget(24601 + getpid(), 0, 0);
     char buffer[BUF_SIZE];
     sprintf(buffer, "%d", getpid());
     remove(buffer);
     shmctl(shmd, IPC_RMID, 0);
 
-    shmd = shmget(shared_mems[0], 0, 0);
     int j;
     for (j = 0; all_clients[j] != 0; j++)
     {
@@ -62,10 +68,6 @@ void clean_up_client()
         remove(buffer);
     }
     
-    time_t *data;
-    data = shmat(shmd, 0, 0);
-    *data = 0;
-    shmdt(data);
     free(all_clients);
     free(shared_mems);
     free(last_modified_times);
@@ -223,11 +225,12 @@ void client(char * server)
                 time_t *last_modified;
                 sprintf(p2, "%d_%d", client_id, getppid());
                 int *data;
+                time_t shmd_last_modified;
                 shmd = shmget(shared_mems[z], 0, 0);
                 data = shmat(shmd, 0, 0);
-                time_t shmd_last_modified;
                 shmd_last_modified = *data;
-                if (*data == 0)
+                shmdt(data);
+                if (shmd_last_modified == 0)
                 {
                     all_clients[z] = 0;
                     shared_mems[z] = 0;
@@ -243,7 +246,6 @@ void client(char * server)
                     fix_time_array(last_modified_times, MAX_CLIENTS);
                     z = 0;
                     i -= 1;
-                    shmdt(data);
                     continue;
                 }
                 // write message to all other clients
@@ -278,7 +280,11 @@ void client(char * server)
                 int shmd;
                 int *data;
                 shmd = shmget(shared_mems[h], 0, 0);
-                data = shmat(shmd, 0, 0);
+                if (shmd != -1) {
+                    data = shmat(shmd, 0, 0);
+                } else {
+                    continue;
+                }
                 time_t shmd_last_modified;
                 shmd_last_modified = *data;
                 if (*data == 0)
