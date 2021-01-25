@@ -36,13 +36,14 @@ To run the program, run `make` and subsequently `make run`. `make run` must be r
         - Message a friend.
         - Remove a friend.
 2. User chooses to run one.
-3. Adding, listing, and removing a friend is one step\
+3. Adding, listing, and removing a friend is one step
     - If user wishes to add, then he or she will be prompted to add the username of the person. This person must have already registered.
     - If user wishes to remove, then it's the same procedure as adding. 
 4. Talking to a Friend
     - The user will be prompted to either start a new chatroom, or join an existing friend's room. (Note: as long as an user added a given room owner as a friend, he/she can join that owner's room)
+    - If user wants to join another room, he/she must type the exact name of the room (which will be in format "[friend's username] room"). 
     - When user starts a new chatroom, he or she waits for other clients to join before they start typing. User can exit the chatroom by either clicking ctrl-c or by typing "exit()" in the chat. 
-    - If user exits, the user will have to run `./main` again in order to move on to other chatrooms or create one. 
+    - If user exits, the user will have to run `make run` again in order to move on to other chatrooms or create one. 
     - Return to step 1.
 
 #BUGLIST

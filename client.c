@@ -207,7 +207,6 @@ void client(char * server)
             {
                 kill(getppid(), SIGINT);
             }
-            printf("\nyou wrote: %s\n", buffer);
             int shmd;
             shmd = shmget(shared_mems[0], 0, 0);
             time_t *last_modified;
