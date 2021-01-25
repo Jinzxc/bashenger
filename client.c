@@ -328,7 +328,7 @@ void client(char * server)
                         }
                         char msg[BUF_SIZE];
                         read(fd, msg, BUF_SIZE);
-                        printf("\nmsg: %s\n", msg);
+                        printf("\n%d: %s\n", all_clients[h], msg);
                         exit(0);
                     }
                     else
