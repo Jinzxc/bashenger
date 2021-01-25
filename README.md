@@ -24,6 +24,7 @@ To run the program, run `make` and subsequently `make run`. `make run` must be r
     - time.h
     - errno.h
 
+Run `make clean` before doing anything
 ## Basic Walkthrough
 0.  Prompts user to type a username.
     - If username is not found then prompts users to sign up.
