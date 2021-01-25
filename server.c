@@ -77,7 +77,6 @@ void setup_new_client(int * id, key_t * key, char * user_room) {
     data = shmat(shmd, 0, 0);
     // initiate a last_modified time 
     *data = time(NULL);
-    printf("last_modified: %ld\n", *data);
     shmdt(data);
     close(fd);
     *id = atoi(secret_path);
@@ -94,7 +93,6 @@ void read_message(char *client_pid)
     {
         return;
     }
-    printf("%s\n", buffer);
 }
 
 void server(int max_clients, char *user_room) {
@@ -136,10 +134,7 @@ void server(int max_clients, char *user_room) {
             sprintf(fifo, "%d", client_pids[k]);
             int fd;
             fd = open(fifo, O_WRONLY);
-            printf("writing current client to client %d...\n", client_pids[k]);
             int status;
-            printf("curr_client: %d %d\n", client_pids[k], shared_mems[k]);
-            printf("new_client: %d %d\n", client_pids[i], shared_mems[i]);
 
             status = write(fd, &client_pids[i], sizeof(int)); // tell each client the new client 
             check_error(status);
