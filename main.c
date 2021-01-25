@@ -12,9 +12,8 @@
 #include "main.h"
 #include "util.c"
 #include "friends.c"
-// #include "server.c"
-
-#define B_SIZE 256
+#include "server.c"
+#include "client.c"
 
 // password checker
 // not safe, stuff is in plain text
@@ -35,18 +34,16 @@ int pass_auth(char *pass, char *input)
 char *pass_find(char *data, char *input)
 {
     FILE *users = fopen("users.txt", "r");
-    char *pass = malloc(B_SIZE * sizeof(char *));
+    char *pass = malloc(BUF_SIZE * sizeof(char *));
     int got = 0;
 
     // search for user then password
-    while (fgets(data, B_SIZE, users))
+    while (fgets(data, BUF_SIZE, users))
     {
         char * cur_username = strsep(&data, ";"); // get the username, data is now the password
         if (cmp(cur_username, input))
         {
-            printf("%s\n", pass);
             strncpy(pass, data, strlen(data) - 1);
-            printf("%s\n", pass);
             got = 1;
             break;
         }
@@ -64,13 +61,11 @@ char *pass_find(char *data, char *input)
 
 void log_in(char *data, char *input, char *username)
 {
-    char account[B_SIZE];
-    char *user_data;
-    // char * username = malloc(B_SIZE);
+    char account[BUF_SIZE];
 
     // input username
     printf("Please enter a username: ");
-    readin(input, B_SIZE);
+    readin(input, BUF_SIZE);
 
     if(strchr(input, ' ')) {
         printf("Please don't use spaces in your username\n");
@@ -88,13 +83,13 @@ void log_in(char *data, char *input, char *username)
         char *pass = pass_find(data, username);
 
         if (pass[0] == '\0') {
-            user_data[0] = '\0';
+            username[0] = '\0';
             free(pass);
             return;
         }
 
         printf("Please enter a password: ");
-        readin(input, B_SIZE);
+        readin(input, BUF_SIZE);
 
         // authenticate password
         if (!pass_auth(pass, input)) {
@@ -105,14 +100,14 @@ void log_in(char *data, char *input, char *username)
     }
     else
     {
-        strncpy(account, input, B_SIZE);
+        strncpy(account, input, BUF_SIZE);
         printf("\nLooks like you are a new user. If so, please type a new password below.\nOtherwise exit the program\n\n");
-        readin(input, B_SIZE);
+        readin(input, BUF_SIZE);
 
         FILE *users = fopen("users.txt", "a");
 
         strcat(account, ";");
-        strncat(account, input, B_SIZE);
+        strncat(account, input, BUF_SIZE);
         strcat(account, "\n");
 
         fputs(account, users);
@@ -140,7 +135,7 @@ char ** parse_input(char * input) {
     i = 0;
     char ** names = malloc(size * sizeof(char *));
     while ((token = strsep(&input, ",")) != NULL) {
-        char * tok = malloc(B_SIZE);
+        char * tok = malloc(BUF_SIZE);
         strncpy(tok, token, strlen(token));
         names[i] = tok;
         i++;
@@ -148,31 +143,20 @@ char ** parse_input(char * input) {
     return names;
 }
 
-void generate_room(char *username)
-{
-    char user_room[B_SIZE];
-    strncpy(user_room, username, strlen(username));
-    strncat(user_room, " room", 5);
-
-    // server connection
-    // server(5, user_room);
-}
-
 char ** get_friend_rooms(char *username)
 {
-    // temp number for 10
     char **friends = get_friends(username);
-    char **rooms = malloc(10 * sizeof(char *));
-    char room_name[B_SIZE];
+    char **rooms = malloc(sizeof(friends));
+    char room_name[BUF_SIZE];
 
     int i = 0;
     int j = 0;
     while(friends[i]) {
-        strncpy(room_name, friends[i], strlen(friends[i]));
+        strncpy(room_name, friends[i], BUF_SIZE);
         strncat(room_name, " room", 5);
         if(user_exists(room_name)) {
-            char * room = malloc(B_SIZE * sizeof(char));
-            strncpy(room, room_name, B_SIZE);
+            char * room = malloc(BUF_SIZE * sizeof(char));
+            strncpy(room, room_name, BUF_SIZE);
             rooms[j] = room;
             j++;
         }
@@ -188,39 +172,48 @@ void select_rooms(char **rooms)
 {
     int i = 0;
     int selected = 0;
-    char select[B_SIZE];
-    printf("Here are the available from your friends:\n");
+    char select[BUF_SIZE];
+    printf("\nHere are the available from your friends:\n");
     while(rooms[i]) {
         printf("%s\n", rooms[i]);
         i++;
     }
 
+    printf("\n");
+
     while(1) {
-        readin(select, B_SIZE);
+        readin(select, BUF_SIZE);
         if(cmp(select, "exit"))
-            return;
+            break;
 
         int j;
         for(j = 0; j < i; j++) {
-            if(cmp(select, rooms[j]) || cmp(select, strsep(&rooms[j], " "))) 
+            if(cmp(select, rooms[j])) {
                 selected = 1;
                 free_all(rooms);
-                // add client connection to the room
+                printf("\n[%s selected]\n", select);
+                client(select);
             }
+        }
 
         if(!selected)
-            printf("Choose a correct room to join or type 'exit' to exit\n");
+                printf("Choose a correct room to join or type 'exit' to exit\n");
     }
 
     free_all(rooms);
+    printf("\n");
 }
 
 
 void talk_to_friends(char *username, char *input)
 {
     int f;
-    printf("Would you like to make a room (1) or join a room(2)?\n");
-    readin(input, B_SIZE);
+    printf("Would you like to make a room (1) or join a room(2)?");
+    readin(input, BUF_SIZE);
+
+    char user_room[BUF_SIZE];
+    strncpy(user_room, username, BUF_SIZE);
+    strncat(user_room, " room", 5);
 
     switch (input[0])
     {
@@ -228,10 +221,11 @@ void talk_to_friends(char *username, char *input)
         f = fork();
 
         if(f) {
-            sleep(2);
-            // add client connection to room
+            sleep(1);
+            printf("%s\n", user_room);
+            client(user_room);
         } else {
-            generate_room(username);
+            server(MAX_CLIENTS, user_room);
         }
         break;
     case '2':
@@ -248,7 +242,7 @@ void handle_friends(char *username, char *input)
     printf("What would you like to do?\n");
     printf("1 List your current friends\n2 Add a friend\n3 Remove a friend\n4 Talk to friends\n\n");
 
-    readin(input, B_SIZE);
+    readin(input, BUF_SIZE);
     switch (input[0])
     {
     case '1':
@@ -256,12 +250,12 @@ void handle_friends(char *username, char *input)
         break;
     case '2':
         printf("Who would you like to add? ");
-        readin(input, B_SIZE);
+        readin(input, BUF_SIZE);
         add_friend(username, input);
         break;
     case '3':
         printf("Who would you like to delete? ");
-        readin(input, B_SIZE);
+        readin(input, BUF_SIZE);
         remove_friend(username, input);
         break;
     case '4':
@@ -276,9 +270,9 @@ void handle_friends(char *username, char *input)
 // add semicolons to your username at your own risk
 int main()
 {
-    char input[B_SIZE];        // store user inputs
-    char data[B_SIZE];         // store other data
-    char username[B_SIZE];     // store current user
+    char input[BUF_SIZE];        // store user inputs
+    char data[BUF_SIZE];         // store other data
+    char username[BUF_SIZE];     // store current user
 
     // make a users file if there are none
     // users file will contain all users

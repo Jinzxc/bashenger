@@ -15,40 +15,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#define BUF_SIZE 256
-#define MAX_CLIENTS 10
+
+#include "util.h"
 
 key_t *shared_mems;
 int *all_clients;
 time_t *last_modified_times;
 int * malloc_i;
-
-void check_error(int status)
-{
-    if (status == -1)
-    {
-        printf("Error (%d): %s\n", errno, strerror(errno));
-    }
-}
-
-int fix_array(int *arr, int max_clients)
-{
-    int i = 0;
-    int curr = 0;
-    for (int i = 0; i < max_clients; i++)
-    {
-        if (arr[i] != 0)
-        {
-            arr[curr] = arr[i];
-            curr++;
-        }
-    }
-    for (curr; curr < max_clients; curr++)
-    {
-        arr[curr] = 0;
-    }
-    return curr;
-}
+char server_name[BUF_SIZE];
 
 int fix_time_array(time_t *arr, int max_clients)
 {
@@ -62,22 +36,13 @@ int fix_time_array(time_t *arr, int max_clients)
             curr++;
         }
     }
-    for (curr; curr < max_clients; curr++)
+    while (curr < max_clients)
     {
         arr[curr] = 0;
+        curr++;
     }
     return curr;
 }
-
-void print_array(int *arr, int max_clients)
-{
-    for (int i = 0; i < max_clients; i++)
-    {
-        printf("\t%d: %d", i, arr[i]);
-    }
-}
-
-
 
 void clean_up_client()
 {
@@ -114,6 +79,7 @@ void clean_up_client()
         // printf("j: %d", j);
         if (j == 1) {
             shmctl(shmd, IPC_RMID, 0);
+            remove(server_name);
         }
     }
     free(all_clients);
@@ -122,7 +88,7 @@ void clean_up_client()
     free(malloc_i);
 }
 
-static void sighandler(int signo)
+static void sighandler_parent(int signo)
 {
     if (signo == SIGINT)
     {   
@@ -137,11 +103,10 @@ static void sighandler_child(int signo) {
     }
 }
 
-int send_handshake()
+int send_handshake(char * server)
 {
-    char wellknown[] = "wkp";
     int wkp, secret_pipe;
-    wkp = open(wellknown, O_WRONLY);
+    wkp = open(server, O_WRONLY);
     if (wkp == -1)
     {
         printf("Server is offline.\n");
@@ -151,8 +116,9 @@ int send_handshake()
     sprintf(secret_path, "%d", getpid());
     mkfifo(secret_path, 0664);
     int status;
-    status = write(wkp, secret_path, 4 * strlen(secret_path));
+    status = write(wkp, secret_path, BUF_SIZE);
     secret_pipe = open(secret_path, O_RDONLY);
+    printf("secret_pipe: %d\n", secret_pipe);
     // sending initial connection request to server
     check_error(status);
     // receiving acknowledgement from server
@@ -187,18 +153,20 @@ int read_client(int secret_pipe, int *client_pid, key_t *client_mem)
     return 0;
 }
 
-
-int main()
+void client(char * server)
 {
+    strncpy(server_name, server, BUF_SIZE);
     shared_mems = malloc(MAX_CLIENTS * sizeof(key_t));
     all_clients = malloc(MAX_CLIENTS * sizeof(int));
     last_modified_times = malloc(MAX_CLIENTS * sizeof(time_t));
 
     int client_fds[2 * MAX_CLIENTS] = {0};
 
-    signal(SIGINT, sighandler);
+    signal(SIGINT, sighandler_parent);
 
-    int secret_pipe = send_handshake();
+    printf("hi there\n");
+    int secret_pipe = send_handshake(server);
+    printf("goodbye\n");
 
     int key;
     read(secret_pipe, &key, sizeof(key_t));
@@ -319,6 +287,8 @@ int main()
                 {
                     fd = client_fds[z * 2 - 2];
                 }
+
+                printf("fdw: %d\n", fd);
                 status = write(fd, buffer, BUF_SIZE);
                 check_error(status);
             }
@@ -381,6 +351,7 @@ int main()
                         {
                             fd = client_fds[h * 2 - 1];
                         }
+                        printf("fdr: %d\n", fd);
                         char msg[BUF_SIZE];
                         read(fd, msg, BUF_SIZE);
                         printf("\nmsg: %s\n", msg);

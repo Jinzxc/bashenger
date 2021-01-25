@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/errno.h>
 
 // read user input from stdin
 void readin(char *buffer, int len)
@@ -33,4 +34,35 @@ void free_all(char **buffer)
     }
 
     free(buffer);
+}
+
+void print_array(int * arr, int max_clients) {
+    for (int i = 0; i < max_clients; i++) {
+        printf("\t%d: %d", i, arr[i]);
+    }
+}
+
+int fix_array(int * arr, int max_clients) {
+    int i = 0;
+    int curr = 0;
+    for (i = 0; i < max_clients; i++) {
+        if (arr[i] != 0) {
+            arr[curr] = arr[i];
+            curr++;
+        }
+    }
+    while(curr < max_clients) {
+        arr[curr] = 0;
+        curr++;
+    }
+
+    return curr;
+}
+
+void check_error(int status)
+{
+    if (status == -1)
+    {
+        printf("Error (%d): %s\n", errno, strerror(errno));
+    }
 }

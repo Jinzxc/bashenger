@@ -15,21 +15,17 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#define BUF_SIZE 256
+#include "util.h"
+
+int *clients;
+key_t *keys;
 
 static void sighandler(int signo) {
     if (signo == SIGINT) {
-        unlink("./wkp");
         unlink("*_*");
+        free(clients);
+        free(keys);
         exit(0);
-    }
-}
-
-void check_error(int status)
-{
-    if (status == -1)
-    {
-        printf("Error (%d): %s\n", errno, strerror(errno));
     }
 }
 
@@ -95,30 +91,12 @@ void read_message(char *client_pid)
     printf("%s\n", buffer);
 }
 
-int fix_array(int * arr, int max_clients) {
-    int i = 0;
-    int curr = 0;
-    for (i = 0; i < max_clients; i++) {
-        if (arr[i] != 0) {
-            arr[curr] = arr[i];
-            curr++;
-        }
-    }
-    for (curr; curr < max_clients; curr++) {
-        arr[curr] = 0;
-    }
-}
-
-void print_array(int * arr, int max_clients) {
-    for (int i = 0; i < max_clients; i++) {
-        printf("\t%d: %d", i, arr[i]);
-    }
-}
-
-int server(int max_clients, char *user_room) {
+void server(int max_clients, char *user_room) {
     signal(SIGINT, sighandler);
     int * client_pids = malloc(max_clients * sizeof(int));
+    clients = client_pids;
     key_t  * shared_mems = malloc(max_clients * sizeof(key_t));
+    keys = shared_mems;
     // for each client, fork a handshake process
     int i = 0;
     while (i < max_clients) {
