@@ -99,6 +99,7 @@ int send_handshake(char * server)
     }
     char secret_path[BUF_SIZE];
     sprintf(secret_path, "%d", getpid());
+    printf("You are client %s.\n", secret_path);
     mkfifo(secret_path, 0664);
     int status;
     status = write(wkp, secret_path, BUF_SIZE);
