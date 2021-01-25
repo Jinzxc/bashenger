@@ -70,10 +70,6 @@ void clean_up_client()
     *data = 0;
     shmdt(data);
     // printf("j: %d", j);
-    if (j == 1) {
-        shmctl(shmd, IPC_RMID, 0);
-        remove(server_name);
-    }
     free(all_clients);
     free(shared_mems);
     free(last_modified_times);
